@@ -140,9 +140,14 @@ final class TextAreaInputHandler {
             buffer.insertRunesFromUserInput(state, TextAreaRunes.toCodePoints(pasteMessage.content()));
         }
 
-        UpdateResult<Viewport> viewportUpdate = state.viewport.update(msg);
-        state.viewport = viewportUpdate.model();
-        commands.add(viewportUpdate.command());
+        // Upstream textarea.New clears the viewport key map (vp.KeyMap = viewport.KeyMap{}),
+        // so typed pager keys such as d, f, j and space never scroll the input; only
+        // non-key messages such as the mouse wheel reach the viewport.
+        if (!(msg instanceof KeyPressMessage)) {
+            UpdateResult<Viewport> viewportUpdate = state.viewport.update(msg);
+            state.viewport = viewportUpdate.model();
+            commands.add(viewportUpdate.command());
+        }
 
         int newRow = layout.cursorLineNumber(state);
         int newCol = state.col;
