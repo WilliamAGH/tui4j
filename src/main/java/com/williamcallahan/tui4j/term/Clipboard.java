@@ -114,8 +114,11 @@ public final class Clipboard {
             return readProcess(new ProcessBuilder("pbpaste"));
         }
         if (os.contains("win")) {
+            // Preserve clipboard line endings and match readProcess's UTF-8 decoder.
             return readProcess(new ProcessBuilder(
-                "powershell", "-NoProfile", "-Command", "Get-Clipboard"));
+                "powershell", "-NoProfile", "-Command",
+                "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); "
+                    + "[Console]::Out.Write([string](Get-Clipboard -Raw))"));
         }
 
         // Linux/Unix: try xclip first
