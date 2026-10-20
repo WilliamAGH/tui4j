@@ -12,8 +12,10 @@ import org.jline.utils.Signals;
  * Extracted to keep {@link Program} focused on orchestration.
  * <p>
  * Resize notifications come from the {@link Terminal} instead of the OS: the JVM
- * has no {@code WINCH} signal on Windows, while every JLine terminal raises
- * {@link Terminal.Signal#WINCH} when its size changes, including the Windows console.
+ * has no {@code WINCH} signal on Windows, while JLine's system terminals raise
+ * {@link Terminal.Signal#WINCH} when their size changes: POSIX ones from the OS signal
+ * and the Windows console from its buffer-size events. Stream-backed terminals
+ * (custom input/output) never raise it, because their size does not follow a window.
  * <p>
  * Upstream: bubbletea/signals_unix.go
  *
