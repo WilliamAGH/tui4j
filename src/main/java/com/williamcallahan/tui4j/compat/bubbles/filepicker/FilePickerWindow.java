@@ -10,7 +10,8 @@ import java.util.Deque;
  * stack history in
  * github.com/charmbracelet/bubbles/filepicker/filepicker.go, including the
  * height bookkeeping from {@code SetHeight} and the {@code tea.WindowSizeMsg}
- * branch of {@code Update}.
+ * branch of {@code Update}. Resizing also keeps the selected row visible,
+ * unlike the upstream v0.21.0 bounds-only resize bookkeeping.
  */
 final class FilePickerWindow {
 
@@ -25,16 +26,12 @@ final class FilePickerWindow {
     private final Deque<Integer> maxStack = new ArrayDeque<>();
 
     /**
-     * Applies an explicit picker height, shrinking the window when it no
-     * longer fits (upstream {@code SetHeight}).
+     * Records an explicit picker height before the listing bounds are clamped.
      *
      * @param height height in rows
      */
     void setHeight(int height) {
         this.height = Math.max(0, height);
-        if (max > this.height - 1) {
-            max = Math.max(0, Math.max(min, min + this.height - 1));
-        }
     }
 
     /**
@@ -53,15 +50,15 @@ final class FilePickerWindow {
     }
 
     /**
-     * Clamps selection and window bounds after the listing changes so a
-     * shrinking directory cannot leave indices out of bounds.
+     * Clamps selection and window bounds after listing or height changes so
+     * the selected entry stays visible and indices stay within the listing.
      *
      * @param fileCount number of listed entries
      */
     void clamp(int fileCount) {
         int lastIndex = Math.max(0, fileCount - 1);
         selected = Math.min(selected, lastIndex);
-        min = Math.min(min, selected);
+        min = Math.min(selected, Math.max(min, selected - Math.max(0, height - 1)));
         max = Math.min(lastIndex, Math.max(0, min + height - 1));
     }
 

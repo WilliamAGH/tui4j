@@ -125,6 +125,7 @@ public class FilePicker implements Model {
      */
     public void setHeight(int height) {
         this.window.setHeight(height);
+        this.window.clamp(this.files.size());
     }
 
     /**

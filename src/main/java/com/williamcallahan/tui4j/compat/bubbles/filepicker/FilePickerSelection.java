@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -48,10 +47,10 @@ final class FilePickerSelection {
         try {
             isDir = resolvesToDirectory(picker, f);
         } catch (IOException e) {
-            logger.log(Level.WARNING, "Failed to resolve symlink for " + f.name(), e);
+            logger.fine(() -> "Failed to resolve symlink for " + f.name());
             return false;
         }
-        boolean selectable = (!isDir && picker.fileAllowed())
+        boolean selectable = (!isDir && picker.fileAllowed() && picker.canSelect(f.name()))
             || (isDir && picker.dirAllowed());
 
         if (selectable) {
@@ -84,7 +83,7 @@ final class FilePickerSelection {
         try {
             return resolvesToDirectory(picker, f);
         } catch (IOException e) {
-            logger.log(Level.WARNING, "Failed to resolve symlink for " + f.name(), e);
+            logger.fine(() -> "Failed to resolve symlink for " + f.name());
             return false;
         }
     }

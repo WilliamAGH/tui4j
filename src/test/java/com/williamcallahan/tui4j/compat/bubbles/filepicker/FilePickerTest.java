@@ -6,10 +6,12 @@ import com.williamcallahan.tui4j.compat.bubbletea.UpdateResult;
 import com.williamcallahan.tui4j.compat.bubbletea.input.key.Key;
 import com.williamcallahan.tui4j.compat.bubbletea.input.key.KeyType;
 import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -170,7 +172,7 @@ class FilePickerTest {
      */
     @Test
     void testDanglingSymlinkIsNotSelectedByQuery(@TempDir Path dir) throws Exception {
-        Files.createSymbolicLink(dir.resolve("link"), Path.of("missing-target"));
+        createSymbolicLink(dir.resolve("link"), Path.of("missing-target"));
         filePicker.setCurrentDirectory(dir.toString());
         filePicker.update(filePicker.init().execute());
         KeyPressMessage enter = new KeyPressMessage(new Key(KeyType.keyCR));
@@ -185,7 +187,7 @@ class FilePickerTest {
      */
     @Test
     void testDanglingSymlinkIsNotSelectedByEnter(@TempDir Path dir) throws Exception {
-        Files.createSymbolicLink(dir.resolve("link"), Path.of("missing-target"));
+        createSymbolicLink(dir.resolve("link"), Path.of("missing-target"));
         filePicker.setCurrentDirectory(dir.toString());
         filePicker.update(filePicker.init().execute());
 
@@ -195,5 +197,31 @@ class FilePickerTest {
         assertNull(result.command());
         assertNull(filePicker.selectedPath());
         assertEquals(dir.toString(), filePicker.currentDirectory());
+    }
+
+    /** Ensures disabled file types cannot be reported as a successful selection. */
+    @Test
+    void testSelectionRejectsDisallowedFileType(@TempDir Path dir) throws Exception {
+        Files.createFile(dir.resolve("source.java"));
+        filePicker.setCurrentDirectory(dir.toString());
+        filePicker.setAllowedTypes(".txt");
+        filePicker.update(filePicker.init().execute());
+        KeyPressMessage enter = new KeyPressMessage(new Key(KeyType.keyCR));
+
+        assertFalse(filePicker.didSelectFile(enter));
+        assertNull(filePicker.selectedPath());
+
+        filePicker.setAllowedTypes(".java");
+        assertTrue(filePicker.didSelectFile(enter));
+        assertEquals(dir.resolve("source.java").toString(), filePicker.selectedPath());
+    }
+
+    /** Aborts link-dependent tests when the filesystem or process cannot create links. */
+    private static Path createSymbolicLink(Path link, Path target) {
+        try {
+            return Files.createSymbolicLink(link, target);
+        } catch (IOException | UnsupportedOperationException exception) {
+            return Assumptions.abort("Symbolic links are unavailable: " + exception.getMessage());
+        }
     }
 }
