@@ -188,6 +188,35 @@ class RendererFlushTest {
     }
 
     /**
+     * Preserves the bottom row when queued output fills a shrinking view's old region.
+     */
+    @Test
+    void normalScreenQueuedPrintAndShorterViewPreserveBottomRow() {
+        RendererTestTerminal terminal = new RendererTestTerminal(14, 6);
+        RendererFlush flush = new RendererFlush(terminal.terminal());
+        TerminalCellModel screen = new TerminalCellModel(14, 6);
+        screen.positionCursor(1, 0);
+        render(flush, terminal, screen, 14, 6, "old 1\nold 2\nold 3\nold 4\nold 5");
+
+        flush.queuePrintLine("notice 1\nnotice 2");
+        render(flush, terminal, screen, 14, 6, "status\nbody\nfooter");
+
+        assertThat(screen.line(1)).startsWith("notice 1");
+        assertThat(screen.line(2)).startsWith("notice 2");
+        assertThat(screen.line(3)).startsWith("status");
+        assertThat(screen.line(4)).startsWith("body");
+        assertThat(screen.line(5)).startsWith("footer");
+        assertThat(screen.cursorRow()).isEqualTo(5);
+        assertThat(screen.cursorColumn()).isZero();
+
+        render(flush, terminal, screen, 14, 6, "updated\nfooter");
+        assertThat(screen.line(3)).startsWith("updated");
+        assertThat(screen.line(4)).startsWith("footer");
+        assertThat(screen.line(5)).isBlank();
+        assertThat(screen.cursorRow()).isEqualTo(4);
+    }
+
+    /**
      * Proves entering and leaving alternate screen preserves normal-screen line ownership.
      */
     @Test

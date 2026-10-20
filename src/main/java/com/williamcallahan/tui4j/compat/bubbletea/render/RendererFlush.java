@@ -91,10 +91,10 @@ class RendererFlush {
                 out.append("\033[").append(linesRendered - 1).append("A");
             }
 
-            boolean didFlushQueued = flushQueuedMessages(out, width);
-            renderDiffLines(out, newLines, didFlushQueued, width);
+            int queuedLines = flushQueuedMessages(out, width);
+            renderDiffLines(out, newLines, queuedLines > 0, width);
 
-            if (needsEraseBelow(repainted, newLines.length)
+            if (needsEraseBelow(repainted, queuedLines + newLines.length)
                 && (height <= 0 || newLines.length < height)) {
                 if (isInAltScreen) {
                     appendCursorPosition(out, newLines.length + 1);
@@ -151,10 +151,10 @@ class RendererFlush {
         return newLines;
     }
 
-    /** Appends queued print-line messages to the output, skipped in alt-screen mode. */
-    private boolean flushQueuedMessages(StringBuilder out, int width) {
+    /** Appends queued print-line messages and returns their row count; skips alt-screen mode. */
+    private int flushQueuedMessages(StringBuilder out, int width) {
         if (queuedMessageLines.isEmpty() || isInAltScreen) {
-            return false;
+            return 0;
         }
         for (String line : queuedMessageLines) {
             if (width > 0 && StringWidth.stringWidth(line) < width) {
@@ -164,8 +164,9 @@ class RendererFlush {
             }
             out.append("\r\n");
         }
+        int queuedLines = queuedMessageLines.size();
         queuedMessageLines.clear();
-        return true;
+        return queuedLines;
     }
 
     /**
@@ -278,11 +279,13 @@ class RendererFlush {
      * A repaint in the alternate screen must clear everything under the view,
      * because the terminal may have reflowed previous content into those rows on
      * resize; the renderer owns the whole alternate screen. The normal screen
-     * only erases leftovers below a previously taller view, matching upstream,
-     * so it never clears terminal content the program does not own.
+     * only erases leftovers below a previously taller region, counting queued
+     * output above the new view so no final view row is erased at the bottom
+     * margin. Unlike upstream bubbletea/standard_renderer.go v1.3.10, queued
+     * rows participate in the erase comparison because they occupy old rows.
      *
      * @param repainted whether the render cache was empty (repaint, clear, resize, or screen transition)
-     * @param visibleLines lines painted by this flush
+     * @param visibleLines rows occupied by queued output and the view this flush
      * @return {@code true} when the area below the content should be cleared
      */
     private boolean needsEraseBelow(boolean repainted, int visibleLines) {
