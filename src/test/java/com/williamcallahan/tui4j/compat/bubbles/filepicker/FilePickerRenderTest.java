@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 
@@ -39,14 +40,18 @@ class FilePickerRenderTest {
             Files.createFile(dir.resolve("afile.txt")),
             PosixFilePermissions.fromString("rw-r--r--")
         );
-        Files.createSymbolicLink(dir.resolve("alink"), Path.of("afile.txt"));
+        Path link = Files.createSymbolicLink(dir.resolve("alink"), Path.of("afile.txt"));
+        // The link's own mode is platform-defined: rwxrwxrwx on Linux, umask-derived on macOS.
+        String linkPermissions = PosixFilePermissions.toString(
+            Files.getPosixFilePermissions(link, LinkOption.NOFOLLOW_LINKS)
+        );
 
         String view = pickerAt(dir).view();
 
         assertThat(view)
             .contains("drwxr-xr-x")
             .contains("-rw-r--r--")
-            .contains("lrwxrwxrwx");
+            .contains("l" + linkPermissions + " ");
     }
 
     @Test
