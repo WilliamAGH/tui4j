@@ -75,13 +75,14 @@ class RendererFlush {
                 return;
             }
 
+            String frame = buffer.toString();
             if (queuedMessageLines.isEmpty()
-                && (buffer.isEmpty() || buffer.toString().equals(lastRender))) {
+                && (frame.isEmpty() || frame.equals(lastRender))) {
                 return;
             }
 
             StringBuilder out = new StringBuilder();
-            String[] newLines = splitAndTruncateHeight(height);
+            String[] newLines = splitAndTruncateHeight(frame, height);
             boolean repainted = lastRenderedLines.length == 0;
 
             if (isInAltScreen) {
@@ -120,7 +121,7 @@ class RendererFlush {
             terminal.writer().print(out);
             terminal.writer().flush();
 
-            lastRender = buffer.toString();
+            lastRender = frame;
             lastRenderedLines = newLines;
             needsRender = false;
         } finally {
@@ -137,9 +138,13 @@ class RendererFlush {
      * count and the physical rows disagree.
      * <p>
      * Upstream: bubbletea/standard_renderer.go flush (strings.Split)
+     *
+     * @param frame the view being flushed
+     * @param height terminal rows, or nonpositive for no limit
+     * @return the rows to paint
      */
-    private String[] splitAndTruncateHeight(int height) {
-        String[] newLines = buffer.toString().split("\n", -1);
+    private String[] splitAndTruncateHeight(String frame, int height) {
+        String[] newLines = frame.split("\n", -1);
         if (height > 0 && newLines.length > height) {
             newLines = Arrays.copyOfRange(newLines, newLines.length - height, newLines.length);
         }
