@@ -1,5 +1,8 @@
 package com.williamcallahan.tui4j.compat.bubbles.list.fuzzy;
 
+import com.ibm.icu.lang.UCharacter;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,7 +15,7 @@ import java.util.List;
  * matched at the position that scores best so far — first character, camel case,
  * following a separator and adjacent to the previous match each add a bonus —
  * and candidates are ranked against a penalty for leading and unmatched
- * characters.
+ * UTF-8 bytes, matching upstream's scoring units.
  * <p>
  * Positions are reported in characters rather than upstream's UTF-8 bytes. The
  * consumer contract is character based: {@code bubbles/list} stores these
@@ -20,7 +23,7 @@ import java.util.List;
  * {@code lipgloss.StyleRunes}, which indexes runes, so byte offsets would
  * highlight the wrong characters of a non-ASCII item.
  * <p>
- * Fuzzy: github.com/sahilm/fuzzy/blob/v0.1.1/fuzzy.go
+ * @see <a href="https://raw.githubusercontent.com/sahilm/fuzzy/v0.1.1/fuzzy.go">sahilm/fuzzy v0.1.1 fuzzy.go</a>
  */
 final class Fuzzy {
 
@@ -118,7 +121,9 @@ final class Fuzzy {
             if (equalFold(nextPattern, next) || next == 0) {
                 if (matchedIndex > -1) {
                     if (matchedIndexes.isEmpty()) {
-                        int penalty = matchedIndex * UNMATCHED_LEADING_CHAR_PENALTY;
+                        int leadingBytes = target.substring(0, target.offsetByCodePoints(0, matchedIndex))
+                                .getBytes(StandardCharsets.UTF_8).length;
+                        int penalty = leadingBytes * UNMATCHED_LEADING_CHAR_PENALTY;
                         bestScore += Math.max(penalty, MAX_UNMATCHED_LEADING_CHAR_PENALTY);
                     }
                     totalScore += bestScore;
@@ -133,9 +138,8 @@ final class Fuzzy {
             last = candidate;
         }
 
-        // One point of penalty for every character of the candidate that the
-        // term did not match.
-        totalScore += matchedIndexes.size() - runes.length;
+        // Upstream subtracts the UTF-8 byte length from the matched rune count.
+        totalScore += matchedIndexes.size() - target.getBytes(StandardCharsets.UTF_8).length;
         if (matchedIndexes.size() != pattern.length) {
             return null;
         }
@@ -178,7 +182,7 @@ final class Fuzzy {
         if (first == second) {
             return true;
         }
-        return Character.toUpperCase(Character.toLowerCase(first))
-                == Character.toUpperCase(Character.toLowerCase(second));
+        return UCharacter.foldCase(first, UCharacter.FOLD_CASE_DEFAULT)
+                == UCharacter.foldCase(second, UCharacter.FOLD_CASE_DEFAULT);
     }
 }

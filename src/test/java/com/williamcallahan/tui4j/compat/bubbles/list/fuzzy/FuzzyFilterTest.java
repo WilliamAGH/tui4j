@@ -130,6 +130,46 @@ class FuzzyFilterTest {
                 FuzzyFilter.defaultFilter("tea", new String[]{"emoji🧋tea"})[0].getMatchedIndexes());
     }
 
+    /**
+     * Turkish dotted and dotless I are outside ASCII I's simple-fold orbit.
+     */
+    @Test
+    void simpleFoldDoesNotMatchTurkishI() {
+        assertArrayEquals(new Rank[]{},
+                FuzzyFilter.defaultFilter("i", new String[]{"\u0131", "\u0130"}));
+    }
+
+    /**
+     * Unmatched UTF-8 bytes determine ranking even when rune counts are equal.
+     */
+    @Test
+    void unmatchedPenaltyCountsUtf8Bytes() {
+        assertArrayEquals(new Rank[]{new Rank(1, new int[]{0}), new Rank(0, new int[]{0})},
+                FuzzyFilter.defaultFilter("a", new String[]{"a\u00e9", "ab"}));
+    }
+
+    /**
+     * Equal byte lengths isolate the leading byte-offset penalty from length.
+     */
+    @Test
+    void leadingPenaltyCountsUtf8Bytes() {
+        assertArrayEquals(new Rank[]{new Rank(1, new int[]{1}), new Rank(0, new int[]{1})},
+                FuzzyFilter.defaultFilter("a", new String[]{"\u00e9a", "ba."}));
+    }
+
+    /**
+     * Simple folding preserves ASCII and the Kelvin sign's shared case orbit.
+     */
+    @Test
+    void simpleFoldPreservesAsciiAndKelvinSign() {
+        assertArrayEquals(new Rank[]{new Rank(0, new int[]{0})},
+                FuzzyFilter.defaultFilter("i", new String[]{"I"}));
+        assertArrayEquals(new Rank[]{new Rank(0, new int[]{0})},
+                FuzzyFilter.defaultFilter("k", new String[]{"\u212a"}));
+        assertArrayEquals(new Rank[]{new Rank(0, new int[]{0})},
+                FuzzyFilter.defaultFilter("\u212a", new String[]{"K"}));
+    }
+
     @Test
     void testDefaultFilterEmptyTargets() {
         Rank[] result = FuzzyFilter.defaultFilter("test", new String[]{});
