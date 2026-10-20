@@ -1,5 +1,7 @@
 package com.williamcallahan.tui4j.compat.lipgloss;
 
+import com.williamcallahan.tui4j.compat.lipgloss.color.ColorProfile;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -12,6 +14,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Port of github.com/charmbracelet/lipgloss/runes_test.go.
  */
 class RunesTest {
+
+    /** Pins the profile so styling does not depend on which test ran first in the JVM. */
+    @BeforeEach
+    void setUp() {
+        Renderer.defaultRenderer().setColorProfile(ColorProfile.TrueColor);
+    }
 
     @Test
     void testStyleRunes() {
@@ -51,6 +59,19 @@ class RunesTest {
                         "你好",
                         new int[]{0, 1},
                         "\u001b[7m你好\u001b[0m"
+                ),
+                // Indices count runes (code points), so a supplementary emoji is one index.
+                new TestCase(
+                        "emoji🧋tea 6,7,8",
+                        "emoji🧋tea",
+                        new int[]{6, 7, 8},
+                        "emoji🧋\u001b[7mtea\u001b[0m"
+                ),
+                new TestCase(
+                        "out of bounds ignored",
+                        "hi",
+                        new int[]{-1, 1, 9},
+                        "h\u001b[7mi\u001b[0m"
                 )
         );
 
