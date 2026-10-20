@@ -189,8 +189,10 @@ class FilePickerTest {
         filePicker.setCurrentDirectory(dir.toString());
         filePicker.update(filePicker.init().execute());
 
-        filePicker.update(new KeyPressMessage(new Key(KeyType.keyCR)));
+        UpdateResult<FilePicker> result = filePicker.update(new KeyPressMessage(new Key(KeyType.keyCR)));
 
+        // Upstream breaks out on a failed os.Stat; an ErrorMessage would end the program.
+        assertNull(result.command());
         assertNull(filePicker.selectedPath());
         assertEquals(dir.toString(), filePicker.currentDirectory());
     }

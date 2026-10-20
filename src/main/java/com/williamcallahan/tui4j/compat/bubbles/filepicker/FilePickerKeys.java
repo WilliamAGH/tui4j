@@ -2,7 +2,6 @@ package com.williamcallahan.tui4j.compat.bubbles.filepicker;
 
 import com.williamcallahan.tui4j.compat.bubbles.filepicker.FilePicker.DirEntry;
 import com.williamcallahan.tui4j.compat.bubbles.key.Binding;
-import com.williamcallahan.tui4j.compat.bubbletea.ErrorMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.UpdateResult;
 import java.io.IOException;
@@ -188,7 +187,9 @@ final class FilePickerKeys {
         try {
             isDir = FilePickerSelection.resolvesToDirectory(picker, f);
         } catch (IOException e) {
-            return UpdateResult.from(picker, () -> new ErrorMessage(e));
+            // Upstream breaks out when os.Stat of the link target fails; an
+            // ErrorMessage would end the whole program over a dangling link.
+            return UpdateResult.from(picker);
         }
 
         if (
