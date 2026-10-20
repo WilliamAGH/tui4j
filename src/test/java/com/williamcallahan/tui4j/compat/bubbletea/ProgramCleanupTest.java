@@ -21,9 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests the terminal writes emitted while a program shuts down.
  * <p>
  * Upstream: github.com/charmbracelet/bubbletea/tea.go {@code shutdown} runs
- * {@code renderer.stop()} (final frame, then {@code EraseEntireLine} + carriage return) and then
- * {@code restoreTerminalState}, which only changes modes (bracketed paste, cursor visibility,
- * mouse, focus, alt screen) and never moves the cursor.
+ * {@code renderer.stop()}, which erases the final row, then {@code restoreTerminalState}.
+ * tui4j keeps the final row, so cleanup moves the cursor to the start of the next line
+ * where the shell prompt appears.
  */
 class ProgramCleanupTest {
 
@@ -65,8 +65,8 @@ class ProgramCleanupTest {
     }
 
     @Test
-    @DisplayName("cleanup restores modes without moving the cursor")
-    void test_CleanupDoesNotMoveTheCursor() {
+    @DisplayName("cleanup moves below the kept final row")
+    void test_CleanupMovesBelowTheFinalRow() {
         Terminal terminal = newRecordingTerminal();
         StandardRenderer renderer = new StandardRenderer(terminal);
         InputHandler inputHandler = new InputHandler() {
@@ -95,9 +95,8 @@ class ProgramCleanupTest {
 
         // Control: the cursor-visibility restore proves puts() calls are recorded.
         assertThat(puts).contains(InfoCmp.Capability.cursor_visible);
-        // Upstream restoreTerminalState never writes cursor motion.
-        assertThat(puts).doesNotContain(InfoCmp.Capability.carriage_return);
-        assertThat(puts).doesNotContain(InfoCmp.Capability.cursor_down);
+        assertThat(puts).containsSubsequence(
+            InfoCmp.Capability.carriage_return, InfoCmp.Capability.cursor_down);
         assertThat(running).isFalse();
     }
 }
