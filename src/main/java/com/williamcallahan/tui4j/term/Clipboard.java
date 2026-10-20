@@ -26,8 +26,11 @@ public final class Clipboard {
         Clipboard.class.getName()
     );
 
-    /** Upper bound for a clipboard helper command to print its contents. */
-    private static final Duration PASTE_TIMEOUT = Duration.ofSeconds(2);
+    /**
+     * Upper bound for a clipboard helper command to print its contents; generous
+     * enough for a cold Windows PowerShell start.
+     */
+    private static final Duration PASTE_TIMEOUT = Duration.ofSeconds(5);
 
     /** Prevents instantiation of this utility class. */
     private Clipboard() {}
