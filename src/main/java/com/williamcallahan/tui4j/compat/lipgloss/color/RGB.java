@@ -86,8 +86,9 @@ public record RGB(float r, float g, float b) {
         float grayValue = (8 + 10 * grayIndex) / 255.0f;
 
         // Compare distances to determine whether to use color or grayscale
-        float colorDist = distanceHSLuv(new RGB(cr, cg, cb));
-        float grayDist = distanceHSLuv(new RGB(grayValue, grayValue, grayValue));
+        HSLuv source = HSLuv.fromRgb(this);
+        float colorDist = (float) source.distanceTo(HSLuv.fromRgb(new RGB(cr, cg, cb)));
+        float grayDist = (float) source.distanceTo(HSLuv.fromRgb(new RGB(grayValue, grayValue, grayValue)));
 
         if (colorDist <= grayDist) {
             return new ANSI256Color(16 + colorIndex);

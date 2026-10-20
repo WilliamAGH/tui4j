@@ -43,8 +43,8 @@ final class Luv {
      * @return blended color
      */
     static RGB blend(RGB from, RGB to, double t) {
-        double[] start = fromRgb(from);
-        double[] end = fromRgb(to);
+        double[] start = fromRgb(from, WHITE_REFERENCE);
+        double[] end = fromRgb(to, WHITE_REFERENCE);
 
         return toRgb(
                 start[0] + t * (end[0] - start[0]),
@@ -52,8 +52,8 @@ final class Luv {
                 start[2] + t * (end[2] - start[2]));
     }
 
-    /** Converts an sRGB color to its CIELUV coordinates. */
-    private static double[] fromRgb(RGB rgb) {
+    /** Converts sRGB to CIELUV using the caller's white reference, as HSLuv requires. */
+    static double[] fromRgb(RGB rgb, double[] whiteReference) {
         double red = linearize(rgb.r());
         double green = linearize(rgb.g());
         double blue = linearize(rgb.b());
@@ -62,12 +62,12 @@ final class Luv {
         double y = 0.21263900587151036 * red + 0.71516867876775593 * green + 0.072192315360733715 * blue;
         double z = 0.019330818715591851 * red + 0.11919477979462599 * green + 0.95053215224966058 * blue;
 
-        double relative = y / WHITE_REFERENCE[1];
+        double relative = y / whiteReference[1];
         double lightness = relative <= CIE_EPSILON
                 ? relative * CIE_KAPPA / 100.0
                 : 1.16 * Math.cbrt(relative) - 0.16;
 
-        double[] referenceChromaticity = xyzToUv(WHITE_REFERENCE[0], WHITE_REFERENCE[1], WHITE_REFERENCE[2]);
+        double[] referenceChromaticity = xyzToUv(whiteReference[0], whiteReference[1], whiteReference[2]);
         double[] chromaticity = xyzToUv(x, y, z);
 
         return new double[] {

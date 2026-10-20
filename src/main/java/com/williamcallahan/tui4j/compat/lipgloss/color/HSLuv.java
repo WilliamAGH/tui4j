@@ -1,5 +1,8 @@
 package com.williamcallahan.tui4j.compat.lipgloss.color;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * HSLuv color-space values and distance metric used to pick the nearest palette entry.
  * <p>
@@ -34,6 +37,9 @@ final class HSLuv {
     /** Lower lightness bound of the HSLuv conversion, on the 0-100 scale upstream uses internally. */
     private static final double MIN_LIGHTNESS = 0.00000001;
 
+    /** Fixed palette coordinates, shared by RGB and ANSI palette comparisons. */
+    private static final Map<RGB, HSLuv> PALETTE = paletteCoordinates();
+
     private final double hue;
     private final double saturation;
     private final double lightness;
@@ -53,30 +59,42 @@ final class HSLuv {
 
     /**
      * Converts an sRGB color to its HSLuv values.
+     * Reuses CIELUV with HSLuv's rounded D65, matching
+     * https://github.com/lucasb-eyer/go-colorful/blob/v1.2.0/hsluv.go.
      *
      * @param rgb color to convert
      * @return HSLuv values for the color
      */
     static HSLuv fromRgb(RGB rgb) {
-        double red = linearize(rgb.r());
-        double green = linearize(rgb.g());
-        double blue = linearize(rgb.b());
+        HSLuv cached = PALETTE.get(rgb);
+        return cached != null ? cached : calculateFromRgb(rgb);
+    }
 
-        double x = 0.41239079926595948 * red + 0.35758433938387796 * green + 0.18048078840183429 * blue;
-        double y = 0.21263900587151036 * red + 0.71516867876775593 * green + 0.072192315360733715 * blue;
-        double z = 0.019330818715591851 * red + 0.11919477979462599 * green + 0.95053215224966058 * blue;
+    /** Shares CIELUV conversion while preserving HSLuv's rounded white reference. */
+    private static HSLuv calculateFromRgb(RGB rgb) {
+        double[] luv = Luv.fromRgb(rgb, WHITE_REFERENCE);
+        double u = luv[1];
+        double v = luv[2];
 
-        double relativeLuminance = y / WHITE_REFERENCE[1];
-        double luminance = relativeLuminance <= CIE_EPSILON
-                ? relativeLuminance * CIE_KAPPA / 100.0
-                : 1.16 * Math.cbrt(relativeLuminance) - 0.16;
+        return fromLuvLch(luv[0], Math.sqrt(u * u + v * v), hueOf(u, v));
+    }
 
-        double[] chromaReference = xyzToUv(WHITE_REFERENCE[0], WHITE_REFERENCE[1], WHITE_REFERENCE[2]);
-        double[] chroma = xyzToUv(x, y, z);
-        double u = 13.0 * luminance * (chroma[0] - chromaReference[0]);
-        double v = 13.0 * luminance * (chroma[1] - chromaReference[1]);
-
-        return fromLuvLch(luminance, Math.sqrt(u * u + v * v), hueOf(u, v));
+    /**
+     * Projects the canonical palette once. Hex parsing multiplies by 1/255,
+     * whereas RGB quantization divides by 255; cache both float encodings
+     * without changing the rounding of either conversion path.
+     */
+    private static Map<RGB, HSLuv> paletteCoordinates() {
+        Map<RGB, HSLuv> palette = new HashMap<>();
+        for (String hex : ANSIColors.ANSI_HEX) {
+            RGB color = RGB.fromHexString(hex);
+            palette.computeIfAbsent(color, HSLuv::calculateFromRgb);
+            RGB divided = new RGB(Math.round(color.r() * 255.0f) / 255.0f,
+                    Math.round(color.g() * 255.0f) / 255.0f,
+                    Math.round(color.b() * 255.0f) / 255.0f);
+            palette.computeIfAbsent(divided, HSLuv::calculateFromRgb);
+        }
+        return Map.copyOf(palette);
     }
 
     /**
@@ -160,23 +178,6 @@ final class HSLuv {
     /** Returns the length of a ray from the pole until it intersects a boundary line. */
     private static double lengthOfRayUntilIntersect(double theta, double slope, double intercept) {
         return intercept / (Math.sin(theta) - slope * Math.cos(theta));
-    }
-
-    /** Converts an sRGB channel to linear light. */
-    private static double linearize(double value) {
-        if (value <= 0.04045) {
-            return value / 12.92;
-        }
-        return Math.pow((value + 0.055) / 1.055, 2.4);
-    }
-
-    /** Returns the CIE L*u*v* chromaticity of a CIEXYZ color. */
-    private static double[] xyzToUv(double x, double y, double z) {
-        double denominator = x + 15.0 * y + 3.0 * z;
-        if (denominator == 0.0) {
-            return new double[] {0.0, 0.0};
-        }
-        return new double[] {4.0 * x / denominator, 9.0 * y / denominator};
     }
 
     /** Clamps a value to the {@code [0, 1]} range, as upstream does. */
