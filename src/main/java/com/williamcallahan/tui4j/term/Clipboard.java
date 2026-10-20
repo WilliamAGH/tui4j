@@ -6,6 +6,8 @@ import java.awt.datatransfer.StringSelection;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,6 +25,9 @@ public final class Clipboard {
     private static final Logger LOG = Logger.getLogger(
         Clipboard.class.getName()
     );
+
+    /** Upper bound for a clipboard helper command to print its contents. */
+    private static final Duration PASTE_TIMEOUT = Duration.ofSeconds(2);
 
     /** Prevents instantiation of this utility class. */
     private Clipboard() {}
@@ -131,7 +136,12 @@ public final class Clipboard {
      */
     private static String readProcess(ProcessBuilder pb) {
         try {
-            Process p = pb.start();
+            Process p = pb.redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            // A helper waiting on an unresponsive selection owner never closes stdout;
+            // killing it ends the read with a nonzero exit instead of pinning the thread.
+            p.onExit()
+                .orTimeout(PASTE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+                .exceptionally(timeout -> p.destroyForcibly());
             String content = new String(
                 p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             p.waitFor();
