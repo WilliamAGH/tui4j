@@ -3,7 +3,7 @@ package com.williamcallahan.tui4j.compat.bubbletea;
 import com.williamcallahan.tui4j.message.CheckWindowSizeMessage;
 import com.williamcallahan.tui4j.runtime.CommandExecutor;
 import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
+import org.jline.terminal.impl.DumbTerminal;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -29,10 +29,8 @@ class ProgramSignalsTest {
         CommandExecutor executor = new CommandExecutor();
         BlockingQueue<Message> messages = new LinkedBlockingQueue<>();
 
-        try (Terminal terminal = TerminalBuilder.builder()
-                .system(false)
-                .streams(new ByteArrayInputStream(new byte[0]), new ByteArrayOutputStream())
-                .build()) {
+        try (Terminal terminal = new DumbTerminal(
+                new ByteArrayInputStream(new byte[0]), new ByteArrayOutputStream())) {
             ProgramSignals.registerAll(config, terminal, executor, messages::add, error -> {
                 throw new AssertionError(error);
             });
