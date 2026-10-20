@@ -1,8 +1,11 @@
 package com.williamcallahan.tui4j.compat.bubbles.progress;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.within;
 
 /**
@@ -23,6 +26,14 @@ class SpringTest {
 
     private static final double FREQUENCY = 18.0;
     private static final double DAMPING = 1.0;
+
+    /** A frame rate must advance the spring by a positive timestep. */
+    @ParameterizedTest
+    @ValueSource(doubles = {0.0, -60.0})
+    void testWithFpsRejectsNonPositiveFrameRates(double fps) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Spring.withFPS(fps, FREQUENCY, DAMPING));
+    }
 
     @Test
     void testWithFpsUsesTheRequestedFrameRate() {

@@ -94,8 +94,12 @@ public class Spring {
      * @param frequency spring frequency
      * @param damping spring damping
      * @return spring instance
+     * @throws IllegalArgumentException when fps is zero or negative
      */
     public static Spring withFPS(double fps, double frequency, double damping) {
+        if (fps <= 0.0) {
+            throw new IllegalArgumentException("fps must be positive");
+        }
         return new Spring(frequency, damping, 1.0 / fps);
     }
 }
