@@ -8,6 +8,9 @@ import com.williamcallahan.tui4j.compat.lipgloss.color.RGB;
 import com.williamcallahan.tui4j.term.TerminalInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -263,6 +266,18 @@ class ProgressTest {
                 .contains("\033[38;5;" + RGB.fromHexString("#7571F9").toANSI256Color().value() + "m");
         assertThat(progress.viewAs(0.0))
                 .contains("\033[38;5;" + RGB.fromHexString("#606060").toANSI256Color().value() + "m");
+    }
+
+    /** A color the profile cannot parse leaves both bar portions unstyled. */
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "not-a-color"})
+    void testUnparseableColorsRenderUnstyled(String color) {
+        Progress progress = new Progress().withWidth(4).withoutPercentage()
+                .withFullColor(color).withEmptyColor(color);
+        progress.setColorProfile(ColorProfile.TrueColor);
+
+        assertThat(progress.viewAs(0.5)).isEqualTo("██░░");
     }
 
     @Test

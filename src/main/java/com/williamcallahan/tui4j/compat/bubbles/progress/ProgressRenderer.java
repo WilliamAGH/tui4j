@@ -129,7 +129,7 @@ final class ProgressRenderer {
      *
      * @param text cell text to color
      * @param color color string, hex or ANSI palette index
-     * @return colored cell text
+     * @return colored cell text, or unstyled text when the color cannot be parsed
      */
     private String colorize(String text, String color) {
         ColorProfile profile = getColorProfile();
@@ -138,6 +138,9 @@ final class ProgressRenderer {
         }
 
         TerminalColor terminalColor = profile.color(color);
+        if (terminalColor == null) {
+            return text;
+        }
         AttributedStyle style = terminalColor.applyAsForeground(new AttributedStyle(), Renderer.defaultRenderer());
         return new AttributedString(text, style).toAnsi(profile.colorsCount(), ForceMode.None);
     }
