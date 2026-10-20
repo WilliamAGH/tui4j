@@ -1,13 +1,18 @@
 package com.williamcallahan.tui4j.compat.bubbletea.render;
 
 import com.williamcallahan.tui4j.ansi.Code;
+import com.williamcallahan.tui4j.compat.bubbletea.EnableMouseCellMotionMessage;
 import org.jline.terminal.Terminal;
+import org.jline.terminal.impl.DumbTerminal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -174,5 +179,25 @@ class StandardRendererTest {
         assertThat(output).contains("line three");
         assertThat(output).endsWith("\u001b[2K\r");
         assertThat(output.indexOf("\u001b[2K")).isGreaterThan(output.indexOf("line three"));
+    }
+
+    /**
+     * Verifies that enabling cell motion on a POSIX terminal emits only tui4j's own mode
+     * sequences. JLine's POSIX {@code trackMouse} writes {@code ?1005h} and {@code ?1000h}, which
+     * would replace the SGR encoding and downgrade cell motion to click-only tracking.
+     */
+    @Test
+    @DisplayName("cell motion on a POSIX terminal keeps the SGR cell-motion sequences only")
+    void test_CellMotionOnPosixTerminalKeepsSgrCellMotionOnly() throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (Terminal terminal = new DumbTerminal(
+                "posix", "xterm-256color", new ByteArrayInputStream(new byte[0]), out, StandardCharsets.UTF_8)) {
+            StandardRenderer renderer = new StandardRenderer(terminal);
+
+            renderer.handleMessage(new EnableMouseCellMotionMessage());
+
+            assertThat(out.toString(StandardCharsets.UTF_8))
+                    .isEqualTo(Code.EnableMouseCellMotion.value() + Code.EnableMouseSgrExt.value());
+        }
     }
 }

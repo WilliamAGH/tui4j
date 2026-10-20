@@ -115,17 +115,6 @@ final class ProgramCore {
         }
     }
 
-    private void trackMouse(Terminal.MouseTracking tracking) {
-        if (terminal == null) {
-            return;
-        }
-        try {
-            terminal.trackMouse(tracking);
-        } catch (RuntimeException ignored) {
-            // Best-effort: unsupported terminals keep the ANSI-only behavior.
-        }
-    }
-
     /** Enables mouse tracking for all motion events. */
     void withMouseAllMotion() {
         config.setEnableMouseAllMotion(true);
@@ -315,11 +304,9 @@ final class ProgramCore {
         if (config.isEnableMouseCellMotion()) {
             renderer.enableMouseCellMotion();
             renderer.enableMouseSGRMode();
-            trackMouse(Terminal.MouseTracking.Normal);
         } else if (config.isEnableMouseAllMotion()) {
             renderer.enableMouseAllMotion();
             renderer.enableMouseSGRMode();
-            trackMouse(Terminal.MouseTracking.Any);
         }
         if (config.isEnableReportFocus() && !renderer.reportFocus()) {
             renderer.enableReportFocus();
