@@ -1,14 +1,11 @@
 package com.williamcallahan.tui4j.compat.lipgloss;
 
 import com.williamcallahan.tui4j.ansi.TextWrapper;
-import com.williamcallahan.tui4j.ansi.Truncate;
 import com.williamcallahan.tui4j.compat.lipgloss.align.AlignmentDecorator;
 import com.williamcallahan.tui4j.compat.lipgloss.border.Border;
 import com.williamcallahan.tui4j.compat.lipgloss.color.ColorProfile;
 import com.williamcallahan.tui4j.compat.lipgloss.color.NoColor;
 import com.williamcallahan.tui4j.compat.lipgloss.color.TerminalColor;
-import org.jline.utils.AttributedCharSequence.ForceMode;
-import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
 
 import java.util.ArrayList;
@@ -842,21 +839,7 @@ public class Style {
         // core rendering
         ColorProfile colorProfile = renderer.colorProfile();
         renderer.newStyle();
-        String[] lines = string.split("\n");
-
-        StringBuilder buffer = new StringBuilder();
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
-            if (colorProfile != ColorProfile.Ascii) {
-                buffer.append(new AttributedString(line, style).toAnsi(colorProfile.colorsCount(), ForceMode.None));
-            } else {
-                buffer.append(line);
-            }
-            if (i < lines.length - 1) {
-                buffer.append('\n');
-            }
-        }
-        string = buffer.toString();
+        string = StyleTextRenderer.render(string, style, colorProfile);
 
         if (!inline) {
             AttributedStyle st = new AttributedStyle();
@@ -886,23 +869,7 @@ public class Style {
             string = MarginDecorator.applyMargins(string, topMargin, rightMargin, bottomMargin, leftMargin, st, renderer);
         }
 
-        if (maxWidth > 0) {
-            String[] maxWidthLines = string.split("\n");
-            for (int i = 0; i < maxWidthLines.length; i++) {
-                maxWidthLines[i] = Truncate.truncate(maxWidthLines[i], maxWidth, ellipsis);
-            }
-            string = String.join("\n", maxWidthLines);
-        }
-
-        if (maxHeight > 0) {
-            String[] maxHeightLines = string.split("\n");
-            int displayHeight = Math.min(maxHeight, maxHeightLines.length);
-            if (maxHeightLines.length > 0) {
-                String[] truncatedLines = new String[displayHeight];
-                System.arraycopy(maxHeightLines, 0, truncatedLines, 0, displayHeight);
-                string = String.join("\n", truncatedLines);
-            }
-        }
+        string = StyleSizeLimiter.clamp(string, maxWidth, maxHeight, ellipsis);
 
         return string;
     }

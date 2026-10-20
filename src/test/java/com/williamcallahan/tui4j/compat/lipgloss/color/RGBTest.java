@@ -97,4 +97,48 @@ class RGBTest {
         // then
         assertThat(strategy).isInstanceOf(RGBAApplyStrategy.class);
     }
+
+    /**
+     * Blending must happen in CIELUV, as upstream does, so a gradient passes
+     * through the same colors.
+     * <p>
+     * Expected bytes are {@code go-colorful.Color.BlendLuv(...).Hex()}, which is
+     * the color bubbles {@code progress} interpolates for a ramp.
+     */
+    @ParameterizedTest(name = "{0} to {1} at {2} blends to {3}")
+    @MethodSource("blendLuvData")
+    void test_ShouldBlendInCieluv(String fromHex, String toHex, double t, String expectedHex) {
+        // given
+        RGB from = RGB.fromHexString(fromHex);
+        RGB to = RGB.fromHexString(toHex);
+
+        // when
+        RGB blended = from.blendLuv(to, t);
+
+        // then
+        assertThat(toHexString(blended)).isEqualTo(expectedHex);
+    }
+
+    static Stream<Arguments> blendLuvData() {
+        return Stream.of(
+                Arguments.of("#FF0000", "#00FF00", 0.0, "#ff0000"),
+                Arguments.of("#FF0000", "#00FF00", 0.25, "#f36e00"),
+                // A plain sRGB interpolation would pass through #808000 here.
+                Arguments.of("#FF0000", "#00FF00", 0.5, "#daa400"),
+                Arguments.of("#FF0000", "#00FF00", 0.75, "#acd300"),
+                Arguments.of("#FF0000", "#00FF00", 1.0, "#00ff00"),
+                Arguments.of("#5A56E0", "#EE6FF8", 0.25, "#8a5be4"),
+                Arguments.of("#5A56E0", "#EE6FF8", 0.5, "#ae61ea"),
+                Arguments.of("#000000", "#FFFFFF", 0.5, "#777777")
+        );
+    }
+
+    private static String toHexString(RGB rgb) {
+        return "#%02x%02x%02x".formatted(
+                channel(rgb.r()), channel(rgb.g()), channel(rgb.b()));
+    }
+
+    private static int channel(float value) {
+        return ((int) (value * 255.0 + 0.5)) & 0xFF;
+    }
 }

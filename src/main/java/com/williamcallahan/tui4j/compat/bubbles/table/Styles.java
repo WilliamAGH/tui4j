@@ -1,6 +1,7 @@
 package com.williamcallahan.tui4j.compat.bubbles.table;
 
 import com.williamcallahan.tui4j.compat.lipgloss.Style;
+import com.williamcallahan.tui4j.compat.lipgloss.color.Color;
 
 /**
  * Port of Bubbles table Styles.
@@ -14,11 +15,14 @@ public class Styles {
 
     /**
      * Creates default table styles.
+     * <p>
+     * Mirrors upstream {@code DefaultStyles}: bold 212 (pink) selected row,
+     * bold padded header, padded cells.
      */
     public Styles() {
         this.header = Style.newStyle().bold(true).padding(0, 1);
         this.cell = Style.newStyle().padding(0, 1);
-        this.selected = Style.newStyle().bold(true);
+        this.selected = Style.newStyle().bold(true).foreground(Color.color("212"));
     }
 
     /**

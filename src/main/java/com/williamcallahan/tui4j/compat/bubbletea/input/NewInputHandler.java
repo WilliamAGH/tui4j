@@ -17,7 +17,6 @@ import com.williamcallahan.tui4j.compat.bubbletea.BlurMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.FocusMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.ProgramException;
 import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
-import com.williamcallahan.tui4j.compat.bubbletea.PasteMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.UnknownSequenceMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.input.key.ExtendedSequences;
 import com.williamcallahan.tui4j.compat.bubbletea.input.key.Key;
@@ -142,7 +141,10 @@ public class NewInputHandler implements InputHandler {
             inBracketedPaste = false;
             String content = pasteBuffer.toString();
             pasteBuffer.setLength(0);
-            messageConsumer.accept(new PasteMessage(content));
+            // Upstream delivers a paste as a KeyMsg with the Paste flag set, so its string
+            // form is "[content]" and key bindings cannot match pasted text.
+            messageConsumer.accept(new KeyPressMessage(
+                new Key(KeyType.KeyRunes, content.toCharArray(), false, true)));
             return BP_END.length();
         }
 

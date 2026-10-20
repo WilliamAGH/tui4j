@@ -1,5 +1,7 @@
 package com.williamcallahan.tui4j.compat.bubbles.textarea;
 
+import com.ibm.icu.lang.UCharacter;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -7,7 +9,14 @@ import java.util.List;
 /**
  * Word wrap for textarea input lines.
  * <p>
- * Port of {@code bubbles/textarea/textarea.go} wrap logic.
+ * Port of {@code bubbles/textarea/textarea.go} {@code wrap}.
+ * <p>
+ * Two properties of the upstream grid matter to the rest of the component: a row
+ * keeps the spaces that follow its last word instead of moving them to the start
+ * of the next row, and the final row is padded with one extra space. The cursor
+ * navigation and {@code LineInfo} measure rows with that trailing space, and the
+ * renderer trims it when it would exceed the width.
+ * tui4j: src/main/java/com/williamcallahan/tui4j/compat/bubbles/textarea/TextAreaWrap.java
  */
 final class TextAreaWrap {
 
@@ -26,92 +35,68 @@ final class TextAreaWrap {
         }
 
         List<int[]> lines = new ArrayList<>();
-        int[] currentLine = new int[0];
+        lines.add(new int[0]);
         int[] word = new int[0];
-        int[] spaces = new int[0];
+        int row = 0;
+        int spaces = 0;
 
         for (int rune : runes) {
-            if (Character.isWhitespace(rune)) {
-                // If we have a word accumulated, process it first before the space
-                if (word.length > 0) {
-                    int lineW = TextAreaRunes.cellWidth(currentLine);
-                    int wordW = TextAreaRunes.cellWidth(word);
-                    int spaceW = TextAreaRunes.cellWidth(spaces);
+            // Upstream uses Go's unicode.IsSpace, which follows the Unicode
+            // White_Space property, so the ICU variant must be the property form
+            // (UCharacter.isWhitespace mirrors Java's and excludes U+00A0).
+            if (UCharacter.isUWhiteSpace(rune)) {
+                spaces++;
+            } else {
+                word = TextAreaRunes.concat(word, new int[] {rune});
+            }
 
-                    // Check if adding the spaces + word exceeds the width
-                    if (lineW + spaceW + wordW > width) {
-                        if (lineW > 0) {
-                            // Current line is full, push it.
-                            lines.add(currentLine);
-                            currentLine = new int[0];
-                            lineW = 0;
-                        }
-                        
-                        // We must preserve spaces. Attach them to the start of the new line.
-                        currentLine = TextAreaRunes.concat(currentLine, spaces);
-                        
-                        // Check if spaces + word fits on the NEW line
-                        // (e.g. width 5, "hello world" -> "hello" / " " / "world")
-                        int newLineW = TextAreaRunes.cellWidth(currentLine);
-                        if (newLineW + wordW > width) {
-                             if (newLineW > 0) {
-                                 lines.add(currentLine);
-                                 currentLine = new int[0];
-                             }
-                             currentLine = TextAreaRunes.concat(currentLine, word);
-                        } else {
-                             currentLine = TextAreaRunes.concat(currentLine, word);
-                        }
-                    } else {
-                        // Fits on current line
-                        currentLine = TextAreaRunes.concat(currentLine, spaces);
-                        currentLine = TextAreaRunes.concat(currentLine, word);
-                    }
-                    word = new int[0];
-                    spaces = new int[0];
+            if (spaces > 0) {
+                if (TextAreaRunes.cellWidth(lines.get(row)) + TextAreaRunes.cellWidth(word) + spaces > width) {
+                    row++;
+                    lines.add(TextAreaRunes.concat(word, spaces(spaces)));
+                } else {
+                    lines.set(row, TextAreaRunes.concat(
+                            TextAreaRunes.concat(lines.get(row), word), spaces(spaces)));
                 }
-                spaces = append(spaces, rune);
+                spaces = 0;
+                word = new int[0];
             } else {
-                word = append(word, rune);
+                // The word buffer already holds the rune just read, so upstream
+                // measures the last rune twice: a word that exactly fills the row
+                // is closed there and a longer one is broken before that rune.
+                int lastRuneWidth = TextAreaRunes.cellWidth(new int[] {word[word.length - 1]});
+                if (TextAreaRunes.cellWidth(word) + lastRuneWidth > width) {
+                    if (lines.get(row).length > 0) {
+                        row++;
+                        lines.add(new int[0]);
+                    }
+                    lines.set(row, TextAreaRunes.concat(lines.get(row), word));
+                    word = new int[0];
+                }
             }
         }
 
-        // Flush remaining content
-        int lineW = TextAreaRunes.cellWidth(currentLine);
-        int wordW = TextAreaRunes.cellWidth(word);
-        int spaceW = TextAreaRunes.cellWidth(spaces);
-
-        if (lineW + spaceW + wordW > width) {
-            if (lineW > 0) {
-                lines.add(currentLine);
-                currentLine = new int[0];
-            }
-            currentLine = TextAreaRunes.concat(currentLine, spaces);
-            
-            // Check overflow on new line again
-            int newLineW = TextAreaRunes.cellWidth(currentLine);
-            if (newLineW + wordW > width) {
-                 if (newLineW > 0) {
-                     lines.add(currentLine);
-                     currentLine = new int[0];
-                 }
-                 currentLine = TextAreaRunes.concat(currentLine, word);
-            } else {
-                 currentLine = TextAreaRunes.concat(currentLine, word);
-            }
+        // The trailing space at the end of the last row keeps navigation on the
+        // final soft-wrapped row consistent with the rows above it.
+        if (TextAreaRunes.cellWidth(lines.get(row)) + TextAreaRunes.cellWidth(word) + spaces >= width) {
+            lines.add(TextAreaRunes.concat(word, spaces(spaces + 1)));
         } else {
-            currentLine = TextAreaRunes.concat(currentLine, spaces);
-            currentLine = TextAreaRunes.concat(currentLine, word);
-        }
-        
-        if (currentLine.length > 0 || lines.isEmpty()) {
-             lines.add(currentLine);
+            lines.set(row, TextAreaRunes.concat(
+                    TextAreaRunes.concat(lines.get(row), word), spaces(spaces + 1)));
         }
 
         return lines;
     }
 
-    private static int[] append(int[] a, int v) {
-        return TextAreaRunes.concat(a, new int[]{v});
+    /**
+     * Returns a rune array of the given number of spaces.
+     *
+     * @param count number of spaces
+     * @return space runes
+     */
+    private static int[] spaces(int count) {
+        int[] result = new int[count];
+        Arrays.fill(result, ' ');
+        return result;
     }
 }

@@ -203,21 +203,26 @@ public class Help {
 
     /**
      * Determines whether the next item fits within the width.
+     * <p>
+     * Upstream only shortens the view when it can render the ellipsis; when the
+     * item overflows and the ellipsis does not fit, the item is still added and
+     * the remaining items keep being rendered, so this must fall through to the
+     * "add the item" result instead of dropping it.
+     * <p>
+     * Bubbles: help/help.go shouldAddItem.
      *
      * @param totalWidth current width
      * @param width next item width
      * @return result indicating fit and optional tail
      */
     private Result shouldAddItem(int totalWidth, int width) {
-        String tail = "";
         if (this.width > 0 && totalWidth + width > this.width) {
-            tail =
+            String tail =
                 " " +
                 styles.getEllipsis().copy().inline(true).render(this.ellipsis);
             if (totalWidth + Size.width(tail) < this.width) {
                 return new Result(false, tail);
             }
-            return new Result(false, "");
         }
         return new Result(true, "");
     }

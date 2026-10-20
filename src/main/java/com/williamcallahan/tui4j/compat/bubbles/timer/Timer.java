@@ -4,6 +4,7 @@ import com.williamcallahan.tui4j.compat.bubbletea.Command;
 import com.williamcallahan.tui4j.compat.bubbletea.Message;
 import com.williamcallahan.tui4j.compat.bubbletea.Model;
 import com.williamcallahan.tui4j.compat.bubbletea.UpdateResult;
+import com.williamcallahan.tui4j.duration.GoDuration;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,13 +17,6 @@ public class Timer implements Model {
 
     private static final Duration DEFAULT_TIMEOUT = Duration.ZERO;
     private static final Duration DEFAULT_INTERVAL = Duration.ofSeconds(1);
-
-    private static final long NANOSECOND = 1L;
-    private static final long MICROSECOND = 1_000L * NANOSECOND;
-    private static final long MILLISECOND = 1_000L * MICROSECOND;
-    private static final long SECOND = 1_000L * MILLISECOND;
-    private static final long MINUTE = 60L * SECOND;
-    private static final long HOUR = 60L * MINUTE;
 
     private static final AtomicInteger LAST_ID = new AtomicInteger(0);
 
@@ -157,9 +151,17 @@ public class Timer implements Model {
         return UpdateResult.from(this);
     }
 
+    /**
+     * Renders the remaining timeout.
+     * <p>
+     * Upstream renders {@code m.Timeout.String()}, so this delegates to the shared
+     * Go duration formatter ({@code 1h2m3s}, {@code 500ms}).
+     *
+     * @return formatted timeout
+     */
     @Override
     public String view() {
-        return formatDuration(timeout);
+        return GoDuration.format(timeout);
     }
 
     /**
@@ -206,103 +208,5 @@ public class Timer implements Model {
 
     private Command startStop(boolean running) {
         return () -> new StartStopMessage(id, running);
-    }
-
-    private static String formatDuration(Duration duration) {
-        long nanos = duration.toNanos();
-        boolean negative = nanos < 0;
-        long value = Math.abs(nanos);
-
-        String formatted;
-        if (value < SECOND) {
-            formatted = formatSubSecond(value);
-        } else {
-            formatted = formatLargerThanSecond(value);
-        }
-
-        if (negative) {
-            return "-" + formatted;
-        }
-        return formatted;
-    }
-
-    private static String formatSubSecond(long nanos) {
-        if (nanos == 0) {
-            return "0s";
-        }
-        if (nanos < MICROSECOND) {
-            return formatWithUnit(nanos, 0, "ns");
-        }
-        if (nanos < MILLISECOND) {
-            return formatWithUnit(nanos, 3, "\u00B5s");
-        }
-        return formatWithUnit(nanos, 6, "ms");
-    }
-
-    private static String formatLargerThanSecond(long nanos) {
-        long secondsPart = (nanos / SECOND) % 60;
-        long fraction = nanos % SECOND;
-
-        StringBuilder out = new StringBuilder();
-        out.append(formatInt(secondsPart));
-        String frac = formatFraction(fraction, 9);
-        if (!frac.isEmpty()) {
-            out.append('.').append(frac);
-        }
-        out.append('s');
-
-        long totalMinutes = nanos / MINUTE;
-        if (totalMinutes > 0) {
-            out.insert(0, 'm').insert(0, formatInt(totalMinutes % 60));
-
-            long hours = nanos / HOUR;
-            if (hours > 0) {
-                out.insert(0, 'h').insert(0, formatInt(hours));
-            }
-        }
-
-        return out.toString();
-    }
-
-    private static String formatWithUnit(long nanos, int precision, String unit) {
-        long scale = pow10(precision);
-        long intPart = precision == 0 ? nanos : nanos / scale;
-        long fraction = precision == 0 ? 0 : nanos % scale;
-
-        StringBuilder out = new StringBuilder();
-        out.append(formatInt(intPart));
-        String frac = formatFraction(fraction, precision);
-        if (!frac.isEmpty()) {
-            out.append('.').append(frac);
-        }
-        out.append(unit);
-        return out.toString();
-    }
-
-    private static String formatFraction(long value, int precision) {
-        if (precision == 0 || value == 0) {
-            return "";
-        }
-        String raw = Long.toString(value);
-        if (raw.length() < precision) {
-            raw = "0".repeat(precision - raw.length()) + raw;
-        }
-        int end = raw.length();
-        while (end > 0 && raw.charAt(end - 1) == '0') {
-            end--;
-        }
-        return raw.substring(0, end);
-    }
-
-    private static String formatInt(long value) {
-        return Long.toString(value);
-    }
-
-    private static long pow10(int precision) {
-        long value = 1;
-        for (int i = 0; i < precision; i++) {
-            value *= 10;
-        }
-        return value;
     }
 }

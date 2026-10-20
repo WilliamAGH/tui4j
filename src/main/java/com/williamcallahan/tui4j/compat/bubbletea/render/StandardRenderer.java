@@ -20,6 +20,14 @@ public class StandardRenderer implements Renderer {
 
     private static final int DEFAULT_FPS = 60;
 
+    /**
+     * Erases the entire line and returns the cursor to column one.
+     * <p>
+     * Upstream: bubbletea/standard_renderer.go stop and kill end with
+     * {@code EraseEntireLine} + {@code "\r"} so the shell prompt replaces the final row.
+     */
+    private static final String ERASE_LINE = "\u001b[2K\r";
+
     private volatile boolean isRunning = false;
     private final ScheduledExecutorService ticker;
     private final long frameTime;
@@ -82,6 +90,7 @@ public class StandardRenderer implements Renderer {
     // Bubble Tea: seeks to replicate bubbletea/standard_renderer.go stop behavior.
     public void stop() {
         flush();
+        rendererFlush.writeToTerminal(ERASE_LINE);
         isRunning = false;
         try {
             ticker.shutdownNow();

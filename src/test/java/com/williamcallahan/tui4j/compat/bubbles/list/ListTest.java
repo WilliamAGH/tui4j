@@ -142,6 +142,37 @@ class ListTest {
     }
 
     @Test
+    void testTitleViewDoesNotRenderSpinnerWhileFiltering() {
+        // Upstream's titleView draws the left-aligned spinner only inside the title
+        // branch, so an in-flight spinner never shifts the shown filter input
+        // (bubbles/list titleView).
+        List withSpinner = createList(new TestItem("foo"), new TestItem("bar"));
+        List withoutSpinner = createList(new TestItem("foo"), new TestItem("bar"));
+
+        applyCommand(withSpinner, withSpinner.setFilterState(FilterState.Filtering));
+        applyCommand(withoutSpinner, withoutSpinner.setFilterState(FilterState.Filtering));
+
+        // A filter fetch keeps the spinner running while the input is shown.
+        withSpinner.startSpinner();
+
+        assertThat(ListViewRenderer.titleView(withSpinner))
+                .isEqualTo(ListViewRenderer.titleView(withoutSpinner));
+    }
+
+    @Test
+    void testTitleViewSeparatesTheStatusMessageFromTheTitle() {
+        // Upstream renders the title, two spaces, then the status message
+        // (bubbles/list titleView), so the two never run together.
+        List list = new List(new Item[]{new TestItem("foo")}, new TestDelegate(), 40, 10);
+        applyCommand(list, list.init());
+        list.newStatusMessage("hello");
+
+        String titleLine = ListViewRenderer.titleView(list).split("\n", -1)[0];
+
+        assertThat(titleLine).isEqualTo("   List   hello");
+    }
+
+    @Test
     void testEmptyResultsStayOnSinglePageWithPaginationDisabled() {
         ListDataSource dataSource = (page, perPage, filterValue) ->
             new FetchedItems(java.util.List.of(), 0, 0, 0);
@@ -181,10 +212,60 @@ class ListTest {
         assertThat(list.index()).isZero();
     }
 
+    @Test
+    void testGoToEndSelectsTheLastItem() {
+        // Upstream sets the page to the last page and the cursor to the last item on
+        // it (`m.cursor = m.Paginator.ItemsOnPage(numItems) - 1`), so go-to-end
+        // always selects the last item (bubbles/list handleBrowsing).
+        List list = createPagedList(12);
+        assertThat(Command.isNone(list.nextPage())).isFalse();
+        applyCommand(list, list.select(0));
+        assertThat(list.index()).isZero();
+
+        applyMessage(list, new KeyPressMessage(new Key(KeyType.KeyEnd)));
+
+        assertThat(list.index()).isEqualTo(11);
+        assertThat(list.selectedItem().filterValue()).isEqualTo("item-11");
+    }
+
+    @Test
+    void testGoToStartSelectsTheFirstItemWhileOnTheFirstPage() {
+        // Upstream resets page and cursor unconditionally (`m.Paginator.Page = 0;
+        // m.cursor = 0`), so go-to-start moves the selection even when the list
+        // already shows the first page (bubbles/list handleBrowsing).
+        List list = createPagedList(12);
+        applyCommand(list, list.select(2));
+        assertThat(list.index()).isEqualTo(2);
+
+        applyMessage(list, new KeyPressMessage(new Key(KeyType.KeyHome)));
+
+        assertThat(list.index()).isZero();
+        assertThat(list.selectedItem().filterValue()).isEqualTo("item-0");
+    }
+
     private static List createList(Item... items) {
         List list = new List(items, new TestDelegate(), 10, 10);
         applyCommand(list, list.init());
         return list;
+    }
+
+    private static List createPagedList(int count) {
+        List list = createList(items(count));
+        applyCommand(list, list.setShowTitle(false));
+        list.setShowFilter(false);
+        list.setShowStatusBar(false);
+        list.setShowPagination(false);
+        applyCommand(list, list.setShowHelp(false));
+        applyCommand(list, list.refresh());
+        return list;
+    }
+
+    private static Item[] items(int count) {
+        Item[] items = new Item[count];
+        for (int i = 0; i < count; i++) {
+            items[i] = new TestItem("item-" + i);
+        }
+        return items;
     }
 
     private static void updateItems(List list, Item... items) {

@@ -23,6 +23,11 @@ class HardWrapTest {
                 new Case("lf_space", "foo bar\n  baz", 3, "foo\n ba\nr\n  b\naz", true),
                 new Case("tab", "foo\tbar", 3, "foo\n\tbar", true),
                 new Case("unicode_space", "foo\u00a0bar", 3, "foo\nbar", false),
+                // U+0085 (NEL) is Unicode White_Space, which upstream's unicode.IsSpace
+                // uses, so it is skipped as a leading space like an ASCII space.
+                new Case("nel_leading_space", "\u0085abc", 10, "abc", false),
+                new Case("nel_kept_when_preserving", "\u0085abc", 10, "\u0085abc", true),
+                new Case("nel_inside_line", "ab\u0085cd", 4, "ab\u0085cd", false),
                 new Case("style_nochange",
                         "\u001B[38;2;249;38;114mfoo\u001B[0m\u001B[38;2;248;248;242m \u001B[0m\u001B[38;2;230;219;116mbar\u001B[0m",
                         7,
@@ -70,7 +75,8 @@ class HardWrapTest {
                         8,
                         "สวัสดีสวัสดี\u001B]8;;https://example.com\u001B\\\nสวัสดีสวัสดี\u001B]8;;\u001B\\",
                         false),
-                new Case("column", "VERTICAL", 1, "V\nE\nR\nT\nI\nC\nA\nL", false)
+                new Case("column", "VERTICAL", 1, "V\nE\nR\nT\nI\nC\nA\nL", false),
+                new Case("nel_leading_space_column", "\u0085ab", 1, "a\nb", false)
         );
 
         for (Case testCase : cases) {

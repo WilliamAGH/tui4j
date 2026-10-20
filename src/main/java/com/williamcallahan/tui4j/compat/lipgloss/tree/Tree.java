@@ -306,14 +306,17 @@ public class Tree implements Node {
     }
 
     /**
-     * Updates the value.
+     * Sets the root value of this tree.
+     * <p>
+     * A node value adopts that node's root value and children, matching upstream, where
+     * {@code SetValue} delegates to {@code Root}.
+     * Lipgloss: tree/tree.go.
      *
-     * @param value value
-     * @return result
+     * @param value value to set
+     * @return this tree
      */
     public Tree setValue(Object value) {
-        setValue(String.valueOf(value));
-        return this;
+        return root(value);
     }
 
     /**
@@ -366,6 +369,19 @@ public class Tree implements Node {
      */
     public String render() {
         return ensureRenderer().render(this, true, "");
+    }
+
+    /**
+     * Renders this tree to a string, matching upstream's {@code Tree.String()}, which every
+     * node type must provide because the upstream {@code Node} interface embeds
+     * {@code fmt.Stringer}.
+     * Lipgloss: tree/tree.go.
+     *
+     * @return rendered tree
+     */
+    @Override
+    public String toString() {
+        return render();
     }
 
     /**

@@ -1,6 +1,12 @@
 package com.williamcallahan.tui4j.compat.bubbles.textinput;
 
 
+import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
+import com.williamcallahan.tui4j.compat.bubbletea.input.key.Key;
+import com.williamcallahan.tui4j.compat.bubbletea.input.key.KeyType;
+import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
+import com.williamcallahan.tui4j.compat.bubbletea.input.key.Key;
+import com.williamcallahan.tui4j.compat.bubbletea.input.key.KeyType;
 import com.williamcallahan.tui4j.compat.lipgloss.Renderer;
 import com.williamcallahan.tui4j.compat.lipgloss.color.ColorProfile;
 import com.williamcallahan.tui4j.compat.lipgloss.color.NoColor;
@@ -57,5 +63,22 @@ class TextInputTest {
 
         // Rendering the view should not throw an exception
         textInput.view();
+    }
+
+    /**
+     * Verifies a bracketed-paste key inserts its text, the way upstream textinput does through
+     * its default branch ({@code insertRunesFromUserInput(msg.Runes)}).
+     * <p>
+     * Upstream: github.com/charmbracelet/bubbles/textinput/textinput.go Update default branch.
+     */
+    @Test
+    public void testPasteKeyInsertsPastedText() {
+        TextInput textInput = new TextInput();
+        textInput.focus();
+
+        textInput.update(new KeyPressMessage(
+            new Key(KeyType.KeyRunes, "hi there".toCharArray(), false, true)));
+
+        assertEquals("hi there", textInput.value());
     }
 }

@@ -60,7 +60,8 @@ public class DefaultDelegate implements ItemDelegate, KeyMap {
             java.util.List<String> lines = new LinkedList<>();
             String[] descLines = desc.split("\n", 0);
             for (int i = 0; i < descLines.length; i++) {
-                if (i > height - 1) {
+                // The title owns one of the height rows upstream reserves.
+                if (i >= height - 1) {
                     break;
                 }
                 lines.add(Truncate.truncate(descLines[i], textWidth, DefaultItemStyles.ELLIPSIS));

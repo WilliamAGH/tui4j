@@ -1,5 +1,7 @@
 package com.williamcallahan.tui4j.compat.x.ansi;
 
+import com.ibm.icu.lang.UCharacter;
+import com.ibm.icu.lang.UProperty;
 import com.ibm.icu.text.BreakIterator;
 
 import java.nio.charset.StandardCharsets;
@@ -15,6 +17,10 @@ import java.nio.charset.StandardCharsets;
  * consistent with Go's nil return pattern. Callers should check for null before use.
  */
 public final class GraphemeCluster {
+
+    /** U+FE0F, the variation selector that requests an emoji (two-cell) glyph. */
+    private static final char VARIATION_SELECTOR_16 = '\uFE0F';
+
     private GraphemeCluster() {}
 
     /**
@@ -144,6 +150,11 @@ public final class GraphemeCluster {
 
     /**
      * GRAPHEME_WIDTH: Treats the cluster as a single unit for width calculation.
+     * <p>
+     * U+FE0F requests the emoji glyph, which terminals draw in two cells even
+     * when the base code point is East Asian Neutral (⚠️, ✔️, ⚙️, ❤️). The check
+     * sits after the zero-width guard so that a cluster that segmenters split
+     * after an ASCII base (the keycaps 1️⃣, #️⃣) is not counted twice.
      */
     private static int calculateGraphemeWidth(String cluster) {
         int codePoint = cluster.codePointAt(0);
@@ -163,8 +174,13 @@ public final class GraphemeCluster {
             return 2;
         }
 
+        // U+FE0F selects the two-cell emoji glyph for an otherwise-narrow base.
+        if (cluster.length() > 1 && cluster.indexOf(VARIATION_SELECTOR_16) >= 0) {
+            return 2;
+        }
+
         // Check if this is a wide character (emoji, CJK, or supplementary)
-        if (isWideCharacter(codePoint)) {
+        if (isWideCharacter(codePoint) || isEmojiPresentation(codePoint)) {
             return 2;
         }
 
@@ -183,41 +199,43 @@ public final class GraphemeCluster {
     }
 
     /**
-     * Determines if a code point represents a wide character (2 terminal cells).
-     * Consolidated check for emoji blocks, CJK blocks, and supplementary code points.
+     * Determines if a code point occupies two terminal cells.
+     * <p>
+     * Uses the Unicode East Asian Width property instead of a hardcoded block
+     * list: East Asian Wide and Fullwidth code points advance two columns, and
+     * everything else (Neutral, Narrow, Halfwidth) advances one. Ambiguous code
+     * points are rendered narrow in a non-East-Asian locale, so they advance
+     * one as well.
+     * <p>
+     * A hardcoded block list cannot track this property: it under-reported wide
+     * symbols outside its blocks (U+2705 ✅, U+274C ❌, U+2B50 ⭐ are Wide) so a
+     * full-width row carrying one measured one cell short and wrapped the right
+     * margin, and it over-reported narrow symbols inside its blocks (U+2600 ☀
+     * and every supplementary code point are Neutral). Matches upstream x/ansi,
+     * which delegates to go-runewidth's doublewidth table.
+     *
+     * @param codePoint code point to measure
+     * @return {@code true} when the code point occupies two terminal cells
      */
     private static boolean isWideCharacter(int codePoint) {
-        // Supplementary code points (U+10000 and above, including many emojis) are wide
-        if (Character.isSupplementaryCodePoint(codePoint)) {
-            return true;
-        }
+        int eastAsianWidth = UCharacter.getIntPropertyValue(codePoint, UProperty.EAST_ASIAN_WIDTH);
+        return eastAsianWidth == UCharacter.EastAsianWidth.WIDE
+                || eastAsianWidth == UCharacter.EastAsianWidth.FULLWIDTH;
+    }
 
-        // Check Unicode block for emoji and CJK characters
-        Character.UnicodeBlock block = Character.UnicodeBlock.of(codePoint);
-        if (block == null) {
-            return false;
-        }
-
-        // Emoji blocks
-        if (block == Character.UnicodeBlock.EMOTICONS
-                || block == Character.UnicodeBlock.MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS
-                || block == Character.UnicodeBlock.TRANSPORT_AND_MAP_SYMBOLS
-                || block == Character.UnicodeBlock.SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS) {
-            return true;
-        }
-
-        // CJK and East Asian wide blocks
-        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
-                || block == Character.UnicodeBlock.HIRAGANA
-                || block == Character.UnicodeBlock.KATAKANA
-                || block == Character.UnicodeBlock.HANGUL_SYLLABLES
-                || block == Character.UnicodeBlock.CJK_COMPATIBILITY
-                || block == Character.UnicodeBlock.CJK_COMPATIBILITY_FORMS
-                || block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
-                || block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS_SUPPLEMENT
-                || block == Character.UnicodeBlock.CJK_RADICALS_SUPPLEMENT
-                || block == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION
-                || block == Character.UnicodeBlock.ENCLOSED_CJK_LETTERS_AND_MONTHS
-                || block == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS;
+    /**
+     * Determines if a code point draws an emoji glyph by default.
+     * <p>
+     * Emoji presentation is two cells even when East Asian Width is Neutral:
+     * a regional-indicator pair (🇺🇸) is one wide cluster, and the base of a
+     * standalone emoji (U+1F1FA) draws wide too. Only the grapheme path consults
+     * this; {@link Method#WC_WIDTH} sums per code point, so a regional-indicator
+     * pair there is two one-cell runes, matching upstream.
+     *
+     * @param codePoint code point to measure
+     * @return {@code true} when the code point has emoji presentation
+     */
+    private static boolean isEmojiPresentation(int codePoint) {
+        return UCharacter.hasBinaryProperty(codePoint, UProperty.EMOJI_PRESENTATION);
     }
 }

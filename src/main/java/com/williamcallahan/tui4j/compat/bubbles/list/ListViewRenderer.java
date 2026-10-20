@@ -81,20 +81,20 @@ final class ListViewRenderer {
                 spinnerWidth + Size.width(spinnerLeftGap) &&
                 list.showSpinner;
 
-        if (list.showSpinner && spinnerOnLeft) {
-            view.append(spinnerView).append(spinnerLeftGap);
-            int titleBarGap = titleBarStyle.leftPadding();
-            titleBarStyle = titleBarStyle.paddingLeft(
-                titleBarGap - spinnerWidth - Size.width(spinnerLeftGap)
-            );
-        }
-
         if (list.showFilter && list.filterState == FilterState.Filtering) {
             view.append(list.filterInput.view());
         } else if (list.showTitle) {
+            if (list.showSpinner && spinnerOnLeft) {
+                view.append(spinnerView).append(spinnerLeftGap);
+                int titleBarGap = titleBarStyle.leftPadding();
+                titleBarStyle = titleBarStyle.paddingLeft(
+                    titleBarGap - spinnerWidth - Size.width(spinnerLeftGap)
+                );
+            }
+
             view.append(styles.title().render(list.title));
             if (list.filterState != FilterState.Filtering) {
-                view.append(" ").append(list.statusMessage);
+                view.append("  ").append(list.statusMessage);
                 view = new StringBuilder(
                     Truncate.truncate(
                         view.toString(),

@@ -175,6 +175,7 @@ final class ListUpdateHandler {
 
     private static Command gotoStart(List list) {
         if (list.paginator.onFirstPage()) {
+            list.cursor = 0;
             return Command.none();
         }
 
@@ -185,13 +186,19 @@ final class ListUpdateHandler {
 
     private static Command gotoEnd(List list) {
         if (list.paginator.onLastPage()) {
+            selectLastItemOnPage(list);
             return Command.none();
         }
 
         list.paginator.setPage(list.paginator.totalPages() - 1);
         return ListDataFetcher.fetchCurrentPageItems(list, () ->
-            keepCursorInBounds(list)
+            selectLastItemOnPage(list)
         );
+    }
+
+    /** Selects the last item of the currently shown page. */
+    private static void selectLastItemOnPage(List list) {
+        list.cursor = Math.max(0, list.currentPageItems.size() - 1);
     }
 
     private static Command cursorLeft(List list) {

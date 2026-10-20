@@ -105,5 +105,53 @@ class CommandTest {
         assertThat(msg).isInstanceOf(BatchMessage.class);
         assertThat(((BatchMessage) msg).commands()).containsExactly(real);
     }
+
+    /**
+     * Verifies {@link Command#println} joins its arguments the way upstream does.
+     * <p>
+     * Upstream: github.com/charmbracelet/bubbletea/standard_renderer.go {@code Println} builds the
+     * body with {@code fmt.Sprint(args...)}, whose documented rule is "spaces are added between
+     * operands when neither is a string". Verified against Go 1.26: {@code fmt.Sprint("a","b")}
+     * is {@code "ab"}, {@code fmt.Sprint(1,2)} is {@code "1 2"}, {@code fmt.Sprint("a",1)} is
+     * {@code "a1"}, {@code fmt.Sprint(1,"b")} is {@code "1b"}, {@code fmt.Sprint("x",1,2)} is
+     * {@code "x1 2"}, and {@code fmt.Sprint()} is {@code ""}.
+     */
+    @Test
+    @DisplayName("Command.println joins arguments like fmt.Sprint")
+    void test_PrintlnJoinsArgumentsLikeFmtSprint() {
+        assertThat(printLineBody(Command.println("a", "b"))).isEqualTo("ab");
+        assertThat(printLineBody(Command.println(1, 2))).isEqualTo("1 2");
+        assertThat(printLineBody(Command.println("a", 1))).isEqualTo("a1");
+        assertThat(printLineBody(Command.println(1, "b"))).isEqualTo("1b");
+        assertThat(printLineBody(Command.println("x", 1, 2))).isEqualTo("x1 2");
+        assertThat(printLineBody(Command.println())).isEqualTo("");
+        assertThat(printLineBody(Command.println("hello"))).isEqualTo("hello");
+    }
+
+    /**
+     * Verifies the paste command reads the system clipboard itself and yields a
+     * {@link PasteMessage} - or nothing when the clipboard is unavailable, which is what the
+     * build's {@code tui4j.clipboard.disabled=true} produces. Upstream bubbles reads the local
+     * clipboard inside {@code textinput.Paste}/{@code textarea.Paste} and returns the text as a
+     * paste message; the port previously emitted an unhandled request message instead, so the
+     * reply never arrived.
+     */
+    @Test
+    @DisplayName("Command.paste yields no message when the clipboard is unavailable")
+    void test_PasteCommandYieldsNoMessageWhenClipboardUnavailable() {
+        assertThat(Command.paste().execute()).isNull();
+    }
+
+    /**
+     * Executes a command and returns its print line body.
+     *
+     * @param command command expected to produce a {@link PrintLineMessage}
+     * @return message body
+     */
+    private static String printLineBody(Command command) {
+        Message message = command.execute();
+        assertThat(message).isInstanceOf(PrintLineMessage.class);
+        return ((PrintLineMessage) message).messageBody();
+    }
 }
 

@@ -19,16 +19,22 @@ public class KeyMap {
 
     /**
      * Creates default viewport key bindings.
+     * <p>
+     * Mirrors the pager-like defaults of upstream
+     * {@code viewport/keymap.go}, including the vim movement keys: pressing
+     * {@code j}/{@code k}/{@code h}/{@code l} scrolls, {@code f}/{@code b}
+     * page, and the half-page bindings are {@code d}/{@code ctrl+d} and
+     * {@code u}/{@code ctrl+u}.
      */
     public KeyMap() {
-        this.pageDown = new Binding(Binding.withKeys("pgdown", "ctrl+d"), Binding.withHelp("pgdn/ctrl+d", "page down"));
-        this.pageUp = new Binding(Binding.withKeys("pgup", "ctrl+u"), Binding.withHelp("pgup/ctrl+u", "page up"));
-        this.halfPageDown = new Binding(Binding.withKeys("ctrl+f"), Binding.withHelp("ctrl+f", "half page down"));
-        this.halfPageUp = new Binding(Binding.withKeys("ctrl+b"), Binding.withHelp("ctrl+b", "half page up"));
-        this.down = new Binding(Binding.withKeys("down"), Binding.withHelp("↓", "line down"));
-        this.up = new Binding(Binding.withKeys("up"), Binding.withHelp("↑", "line up"));
-        this.left = new Binding(Binding.withKeys("left"), Binding.withHelp("←", "left"));
-        this.right = new Binding(Binding.withKeys("right"), Binding.withHelp("→", "right"));
+        this.pageDown = new Binding(Binding.withKeys("pgdown", " ", "f"), Binding.withHelp("f/pgdn", "page down"));
+        this.pageUp = new Binding(Binding.withKeys("pgup", "b"), Binding.withHelp("b/pgup", "page up"));
+        this.halfPageDown = new Binding(Binding.withKeys("d", "ctrl+d"), Binding.withHelp("d", "½ page down"));
+        this.halfPageUp = new Binding(Binding.withKeys("u", "ctrl+u"), Binding.withHelp("u", "½ page up"));
+        this.down = new Binding(Binding.withKeys("down", "j"), Binding.withHelp("↓/j", "down"));
+        this.up = new Binding(Binding.withKeys("up", "k"), Binding.withHelp("↑/k", "up"));
+        this.left = new Binding(Binding.withKeys("left", "h"), Binding.withHelp("←/h", "move left"));
+        this.right = new Binding(Binding.withKeys("right", "l"), Binding.withHelp("→/l", "move right"));
     }
 
     /**

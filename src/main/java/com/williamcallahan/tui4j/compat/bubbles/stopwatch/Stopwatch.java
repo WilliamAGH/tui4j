@@ -4,9 +4,9 @@ import com.williamcallahan.tui4j.compat.bubbletea.Command;
 import com.williamcallahan.tui4j.compat.bubbletea.Message;
 import com.williamcallahan.tui4j.compat.bubbletea.Model;
 import com.williamcallahan.tui4j.compat.bubbletea.UpdateResult;
+import com.williamcallahan.tui4j.duration.GoDuration;
 
 import java.time.Duration;
-import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -18,13 +18,6 @@ public class Stopwatch implements Model {
     private static final Duration DEFAULT_INTERVAL = Duration.ofSeconds(1);
 
     private static final AtomicInteger LAST_ID = new AtomicInteger(0);
-
-    // Duration constants in nanoseconds for formatDuration()
-    private static final long NANOS_PER_HOUR = 3_600_000_000_000L;
-    private static final long NANOS_PER_MINUTE = 60_000_000_000L;
-    private static final long NANOS_PER_SECOND = 1_000_000_000L;
-    private static final long NANOS_PER_MILLI = 1_000_000L;
-    private static final long NANOS_PER_MICRO = 1_000L;
 
     private Duration elapsed;
     private Duration interval;
@@ -128,11 +121,14 @@ public class Stopwatch implements Model {
     /**
      * Renders the elapsed time.
      * <p>
-     * Formats the duration similar to Go's time.Duration string representation (e.g., "1h2m3s").
+     * Upstream renders {@code m.d.String()}, so this delegates to the shared
+     * Go duration formatter ({@code 1h2m3s}, {@code 500ms}).
+     *
+     * @return formatted elapsed time
      */
     @Override
     public String view() {
-        return formatDuration(elapsed);
+        return GoDuration.format(elapsed);
     }
 
     /**
@@ -179,8 +175,14 @@ public class Stopwatch implements Model {
         return Command.tick(interval, __ -> new TickMessage(id, tag));
     }
 
+    /**
+     * Upstream {@code stopwatch.Update} matches {@code msg.ID != m.id} strictly,
+     * with no unset-id sentinel (unlike the spinner's {@code ID > 0} and the
+     * timer's {@code ID != 0} guards), so broadcasting hand-built messages must
+     * not drive a stopwatch instance.
+     */
     private UpdateResult<Stopwatch> handleStartStop(int messageId, boolean shouldRun) {
-        if (messageId != 0 && messageId != id) {
+        if (messageId != id) {
             return UpdateResult.from(this);
         }
         running = shouldRun;
@@ -191,7 +193,7 @@ public class Stopwatch implements Model {
     }
 
     private UpdateResult<Stopwatch> handleReset(int messageId) {
-        if (messageId != 0 && messageId != id) {
+        if (messageId != id) {
             return UpdateResult.from(this);
         }
         elapsed = Duration.ZERO;
@@ -199,7 +201,7 @@ public class Stopwatch implements Model {
     }
 
     private UpdateResult<Stopwatch> handleTick(int messageId, int messageTag) {
-        if (!running || (messageId != 0 && messageId != id)) {
+        if (!running || messageId != id) {
             return UpdateResult.from(this);
         }
         if (messageTag > 0 && messageTag != tag) {
@@ -209,65 +211,5 @@ public class Stopwatch implements Model {
         elapsed = elapsed.plus(interval);
         tag++;
         return UpdateResult.from(this, tick());
-    }
-
-    /** Formats duration in Go's time.Duration.String() style: "1h30m45s", "500ms", "1µs" */
-    private static String formatDuration(Duration duration) {
-        if (duration.isZero()) {
-            return "0s";
-        }
-
-        long nanos = duration.toNanos();
-        StringBuilder sb = new StringBuilder();
-
-        if (nanos < 0) {
-            sb.append("-");
-            nanos = -nanos;
-        }
-
-        long hours = nanos / NANOS_PER_HOUR;
-        if (hours > 0) {
-            sb.append(hours).append("h");
-            nanos %= NANOS_PER_HOUR;
-        }
-
-        long minutes = nanos / NANOS_PER_MINUTE;
-        if (minutes > 0) {
-            sb.append(minutes).append("m");
-            nanos %= NANOS_PER_MINUTE;
-        }
-
-        if (hours == 0 && minutes == 0 && nanos < NANOS_PER_SECOND && nanos > 0) {
-            if (nanos >= NANOS_PER_MILLI) {
-                double ms = nanos / (double) NANOS_PER_MILLI;
-                if (ms == (long) ms) {
-                    sb.append((long) ms).append("ms");
-                } else {
-                    sb.append(String.format(Locale.ROOT, "%.3gms", ms).replaceAll("\\.?0+ms$", "ms"));
-                }
-            } else if (nanos >= NANOS_PER_MICRO) {
-                double us = nanos / (double) NANOS_PER_MICRO;
-                if (us == (long) us) {
-                    sb.append((long) us).append("µs");
-                } else {
-                    sb.append(String.format(Locale.ROOT, "%.3gµs", us).replaceAll("\\.?0+µs$", "µs"));
-                }
-            } else {
-                sb.append(nanos).append("ns");
-            }
-            return sb.toString();
-        }
-
-        double seconds = nanos / (double) NANOS_PER_SECOND;
-        if (seconds > 0 || sb.isEmpty()) {
-            if (seconds == (long) seconds) {
-                sb.append((long) seconds).append("s");
-            } else {
-                String formatted = String.format(Locale.ROOT, "%.9f", seconds).replaceAll("0+$", "").replaceAll("\\.$", "");
-                sb.append(formatted).append("s");
-            }
-        }
-
-        return sb.toString();
     }
 }

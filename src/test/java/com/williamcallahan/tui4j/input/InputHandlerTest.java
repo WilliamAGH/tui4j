@@ -10,7 +10,6 @@ import com.williamcallahan.tui4j.compat.bubbletea.input.key.KeyAliases;
 import com.williamcallahan.tui4j.compat.bubbletea.BlurMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.FocusMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
-import com.williamcallahan.tui4j.compat.bubbletea.PasteMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.UnknownSequenceMessage;
 import org.jline.terminal.Terminal;
 import org.jline.utils.NonBlockingReader;
@@ -170,7 +169,7 @@ class InputHandlerTest {
     }
 
     @Test
-    void test_ShouldPublishPasteMessage_WhenBracketedPasteReceived() throws Throwable {
+    void test_ShouldPublishPasteKey_WhenBracketedPasteReceived() throws Throwable {
         // given
         when(terminal.reader()).thenReturn(reader);
         List<Message> receivedMessages = new ArrayList<>();
@@ -203,10 +202,14 @@ class InputHandlerTest {
         // then
         assertThat(received).isTrue();
         assertThat(receivedMessages).hasSize(1);
-        assertThat(receivedMessages.getFirst()).isInstanceOf(PasteMessage.class);
+        assertThat(receivedMessages.getFirst()).isInstanceOf(KeyPressMessage.class);
 
-        PasteMessage pasteMessage = (PasteMessage) receivedMessages.getFirst();
-        assertThat(pasteMessage.content()).isEqualTo("hello\nworld");
+        // Upstream key.go delivers a paste as a KeyMsg with the Paste flag: its string form is
+        // "[content]" so key bindings cannot match pasted text, and the runes carry the content.
+        KeyPressMessage pasteKey = (KeyPressMessage) receivedMessages.getFirst();
+        assertThat(pasteKey.getKey().paste()).isTrue();
+        assertThat(new String(pasteKey.runes())).isEqualTo("hello\nworld");
+        assertThat(pasteKey.key()).isEqualTo("[hello\nworld]");
     }
 
 

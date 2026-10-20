@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Port of the cursor blink initialization message.
@@ -44,6 +45,14 @@ public class Cursor implements Model {
 
     private static final Duration DEFAULT_BLINK_SPEED = Duration.ofMillis(530);
 
+    /**
+     * Sequence for per-instance cursor identifiers.
+     * <p>
+     * Upstream tags every blink message with the cursor that produced it so a
+     * cursor only consumes its own blinks (bubbles/cursor/cursor.go nextID).
+     */
+    private static final AtomicInteger LAST_ID = new AtomicInteger(0);
+
     private final int id;
 
     private Duration blinkSpeed;
@@ -59,7 +68,7 @@ public class Cursor implements Model {
      * Creates a cursor with default settings.
      */
     public Cursor() {
-        this.id = 0;
+        this.id = nextId();
         this.blinkSpeed = DEFAULT_BLINK_SPEED;
         this.blink = true;
         this.focus = true;
@@ -149,6 +158,16 @@ public class Cursor implements Model {
      */
     public static Message blink() {
         return new InitialBlinkMessage();
+    }
+
+    /**
+     * Allocates the next process-wide cursor identifier, so every cursor instance
+     * receives a distinct id that scopes blink messages to its own producer.
+     *
+     * @return unique cursor id
+     */
+    private static int nextId() {
+        return LAST_ID.incrementAndGet();
     }
 
     /**

@@ -33,10 +33,18 @@ final class ProgressAnimator {
         return targetPercent;
     }
 
-    /** Returns whether the spring animation is active. */
+    /**
+     * Returns whether the spring animation is active.
+     * <p>
+     * Mirrors upstream {@code progress.IsAnimating}, which compares the
+     * <em>signed</em> velocity ({@code dist < 0.001 && velocity < 0.01}): an
+     * under-damped spring that crosses back within 0.001 of the target while
+     * moving downward has stopped animating, even though its speed is still
+     * above 0.01.
+     */
     boolean isAnimating() {
         double dist = Math.abs(percentShown - targetPercent);
-        return !(dist < 0.001 && Math.abs(velocity) < 0.01);
+        return !(dist < 0.001 && velocity < 0.01);
     }
 
     /** Returns whether spring options have been explicitly configured. */

@@ -5,6 +5,10 @@ import com.williamcallahan.tui4j.compat.lipgloss.Renderer;
 import com.williamcallahan.tui4j.compat.lipgloss.Style;
 import com.williamcallahan.tui4j.compat.lipgloss.color.ColorProfile;
 import com.williamcallahan.tui4j.compat.lipgloss.color.RGB;
+import com.williamcallahan.tui4j.compat.lipgloss.color.TerminalColor;
+import org.jline.utils.AttributedCharSequence.ForceMode;
+import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStyle;
 
 /**
  * Rendering and color logic for {@link Progress}.
@@ -118,26 +122,24 @@ final class ProgressRenderer {
         return TextWidth.measureCellWidth(s);
     }
 
+    /**
+     * Styles a bar cell with the given color through the shared profile
+     * conversion and ANSI serialization, so every profile emits the sequences
+     * it supports (a 16-color terminal must not receive 256-color codes).
+     *
+     * @param text cell text to color
+     * @param color color string, hex or ANSI palette index
+     * @return colored cell text
+     */
     private String colorize(String text, String color) {
         ColorProfile profile = getColorProfile();
         if (profile == null || profile == ColorProfile.Ascii) {
             return text;
         }
-        return "\033[" + getANSIColorCode(color, profile) + "m" + text + "\033[0m";
-    }
 
-    private String getANSIColorCode(String color, ColorProfile profile) {
-        RGB rgb = parseColor(color);
-        int r = Math.round(rgb.r() * 255.0f);
-        int g = Math.round(rgb.g() * 255.0f);
-        int b = Math.round(rgb.b() * 255.0f);
-
-        if (profile == ColorProfile.TrueColor) {
-            return "38;2;" + r + ";" + g + ";" + b;
-        } else {
-            int ansi256 = rgbToANSI256(r, g, b);
-            return "38;5;" + ansi256;
-        }
+        TerminalColor terminalColor = profile.color(color);
+        AttributedStyle style = terminalColor.applyAsForeground(new AttributedStyle(), Renderer.defaultRenderer());
+        return new AttributedString(text, style).toAnsi(profile.colorsCount(), ForceMode.None);
     }
 
     private ColorProfile getColorProfile() {
@@ -155,39 +157,24 @@ final class ProgressRenderer {
     }
 
     private static RGB blend(RGB a, RGB b, double t) {
-        return new RGB(
-                (float) (a.r() + (b.r() - a.r()) * t),
-                (float) (a.g() + (b.g() - a.g()) * t),
-                (float) (a.b() + (b.b() - a.b()) * t)
-        );
+        return a.blendLuv(b, t);
     }
 
     private static String rgbToHex(RGB rgb) {
-        int r = Math.round(rgb.r() * 255.0f);
-        int g = Math.round(rgb.g() * 255.0f);
-        int b = Math.round(rgb.b() * 255.0f);
-        return String.format("#%02x%02x%02x", r, g, b);
+        return String.format("#%02x%02x%02x", channel(rgb.r()), channel(rgb.g()), channel(rgb.b()));
     }
 
-    private static int rgbToANSI256(int r, int g, int b) {
-        if (r == g && g == b) {
-            if (r < 8) {
-                return 16;
-            }
-            if (r > 248) {
-                return 231;
-            }
-            return (int) Math.round(((double) r - 8) / 247 * 24) + 232;
-        }
-
-        int rIdx = Math.round((float) r / 255 * 5);
-        int gIdx = Math.round((float) g / 255 * 5);
-        int bIdx = Math.round((float) b / 255 * 5);
-
-        rIdx = Math.clamp(rIdx, 0, 5);
-        gIdx = Math.clamp(gIdx, 0, 5);
-        bIdx = Math.clamp(bIdx, 0, 5);
-
-        return 16 + 36 * rIdx + 6 * gIdx + bIdx;
+    /**
+     * Rounds an sRGB channel to a byte.
+     * <p>
+     * Matches upstream {@code colorful.Color.Hex}, which adds a half and casts to
+     * a byte, so an out-of-gamut blend (CIELUV does not preserve the RGB gamut)
+     * wraps instead of producing an unparseable hex color.
+     *
+     * @param value channel value
+     * @return byte value
+     */
+    private static int channel(float value) {
+        return ((int) (value * 255.0 + 0.5)) & 0xFF;
     }
 }

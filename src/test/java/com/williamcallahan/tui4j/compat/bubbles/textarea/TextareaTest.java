@@ -5,6 +5,9 @@ import com.williamcallahan.tui4j.compat.lipgloss.Style;
 import com.williamcallahan.tui4j.compat.lipgloss.color.ColorProfile;
 import com.williamcallahan.tui4j.compat.lipgloss.color.NoColor;
 import com.williamcallahan.tui4j.compat.bubbles.cursor.CursorMode;
+import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
+import com.williamcallahan.tui4j.compat.bubbletea.input.key.Key;
+import com.williamcallahan.tui4j.compat.bubbletea.input.key.KeyType;
 import com.williamcallahan.tui4j.term.TerminalInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -310,5 +313,179 @@ class TextareaTest {
 
         assertNotNull(keyMap.characterForward(), "characterForward binding should not be null");
         assertNotNull(keyMap.characterBackward(), "characterBackward binding should not be null");
+    }
+
+    /**
+     * Typing a long line that soft-wraps must not corrupt the stored value.
+     * <p>
+     * Port of {@code TestValueSoftWrap} from {@code bubbles/textarea/textarea_test.go}.
+     */
+    @Test
+    void testValueSoftWrap() {
+        Textarea textarea = new Textarea();
+        textarea.setWidth(16);
+        textarea.setHeight(10);
+        textarea.setCharLimit(500);
+        textarea.focus();
+
+        String input = "Testing Testing Testing Testing Testing Testing Testing Testing";
+        typeRunes(textarea, input);
+        textarea.view();
+
+        assertEquals(input, textarea.value(), "Wrapping should not change the stored value");
+    }
+
+    /**
+     * Setting a multi-line value must leave the cursor at the end of the last line,
+     * and setting a value again must reset the buffer.
+     * <p>
+     * Port of {@code TestSetValue} from {@code bubbles/textarea/textarea_test.go};
+     * the upstream {@code col} is the visual column of the cursor, exposed here as
+     * {@link Textarea.LineInfo#columnOffset()}.
+     */
+    @Test
+    void testSetValuePlacesCursorAtEnd() {
+        Textarea textarea = new Textarea();
+        textarea.setValue(String.join("\n", "Foo", "Bar", "Baz"));
+
+        assertEquals("Foo\nBar\nBaz", textarea.value());
+        assertEquals(2, textarea.line(), "Cursor should be on the last row after two newlines");
+        assertEquals(3, textarea.lineInfo().columnOffset(), "Cursor should be after the last character");
+
+        textarea.setValue("Test");
+
+        assertEquals("Test", textarea.value(), "SetValue should reset the text area");
+    }
+
+    /**
+     * Astral-plane characters must be inserted, stored, and measured as single
+     * characters of double width.
+     * <p>
+     * Port of {@code TestCanHandleEmoji} from {@code bubbles/textarea/textarea_test.go}.
+     */
+    @Test
+    void testCanHandleEmoji() {
+        Textarea textarea = new Textarea();
+        textarea.focus();
+
+        typeRunes(textarea, "🧋");
+        assertEquals("🧋", textarea.value(), "Expected emoji to be inserted");
+
+        textarea.setValue("🧋🧋🧋");
+
+        assertEquals("🧋🧋🧋", textarea.value(), "Expected emoji to be inserted");
+        assertEquals(3, textarea.lineInfo().columnOffset(), "Expected cursor to be on the third character");
+        assertEquals(6, textarea.lineInfo().charOffset(), "Expected cursor to be on the sixth cell");
+    }
+
+    /**
+     * Moving down from a line of double-width runes must keep the cursor on the
+     * same visual column.
+     * <p>
+     * Port of {@code TestVerticalNavigationKeepsCursorHorizontalPosition} from
+     * {@code bubbles/textarea/textarea_test.go}.
+     */
+    @Test
+    void testVerticalNavigationKeepsCursorHorizontalPosition() {
+        Textarea textarea = new Textarea();
+        textarea.setWidth(20);
+        textarea.focus();
+        textarea.setValue("你好你好\nHello");
+        press(textarea, KeyType.KeyCtrlHome);
+        press(textarea, KeyType.KeyRight);
+        press(textarea, KeyType.KeyRight);
+
+        assertEquals(4, textarea.lineInfo().charOffset(), "Cursor should be on the fourth cell of the first line");
+        assertEquals(2, textarea.lineInfo().columnOffset(), "Cursor should be after two double width runes");
+
+        press(textarea, KeyType.KeyDown);
+
+        assertEquals(1, textarea.line(), "Cursor should be on the second line");
+        assertEquals(4, textarea.lineInfo().charOffset(), "Cursor should keep its visual column");
+        assertEquals(4, textarea.lineInfo().columnOffset(), "Cursor should be after four characters of the second line");
+    }
+
+    /**
+     * Vertical traversal must remember the horizontal position and forget it when
+     * the cursor moves sideways.
+     * <p>
+     * Port of {@code TestVerticalNavigationShouldRememberPositionWhileTraversing}
+     * from {@code bubbles/textarea/textarea_test.go}.
+     */
+    @Test
+    void testVerticalNavigationShouldRememberPositionWhileTraversing() {
+        Textarea textarea = new Textarea();
+        textarea.setWidth(40);
+        textarea.focus();
+        textarea.setValue(String.join("\n", "Hello", "World", "This is a long line."));
+
+        assertEquals(2, textarea.line(), "Cursor should start on the last line");
+        assertEquals(20, textarea.lineInfo().columnOffset(), "Cursor should be at the end of the last line");
+
+        press(textarea, KeyType.KeyUp);
+        assertEquals(1, textarea.line(), "Cursor should move to the second line");
+        assertEquals(5, textarea.lineInfo().columnOffset(), "Cursor should be at the end of the second line");
+
+        press(textarea, KeyType.KeyUp);
+        assertEquals(0, textarea.line(), "Cursor should move to the first line");
+        assertEquals(5, textarea.lineInfo().columnOffset(), "Cursor should be at the end of the first line");
+
+        press(textarea, KeyType.KeyDown);
+        press(textarea, KeyType.KeyDown);
+        assertEquals(2, textarea.line(), "Cursor should return to the last line");
+        assertEquals(20, textarea.lineInfo().columnOffset(), "Cursor should restore the remembered position");
+
+        press(textarea, KeyType.KeyUp);
+        press(textarea, KeyType.KeyLeft);
+        assertEquals(1, textarea.line(), "Cursor should be on the second line");
+        assertEquals(4, textarea.lineInfo().columnOffset(), "Moving left should move one character back");
+
+        press(textarea, KeyType.KeyDown);
+        assertEquals(2, textarea.line(), "Cursor should be on the last line");
+        assertEquals(4, textarea.lineInfo().columnOffset(), "Moving sideways should forget the remembered position");
+    }
+
+    /**
+     * Sends a key press to the text area.
+     *
+     * @param textarea text area to update
+     * @param keyType key to press
+     */
+    private static void press(Textarea textarea, KeyType keyType) {
+        textarea.update(new KeyPressMessage(new Key(keyType)));
+    }
+
+    /**
+     * Sends a string to the text area one code point at a time, as the input
+     * handler delivers rune key presses.
+     *
+     * @param textarea text area to update
+     * @param input text to type
+     */
+    private static void typeRunes(Textarea textarea, String input) {
+        int index = 0;
+        while (index < input.length()) {
+            char[] runes = Character.toChars(input.codePointAt(index));
+            textarea.update(new KeyPressMessage(new Key(KeyType.KeyRunes, runes)));
+            index += runes.length;
+        }
+    }
+
+    /**
+     * Verifies a bracketed-paste key inserts its text, the way upstream delivers pastes
+     * (a KeyMsg with the Paste flag whose runes the textarea inserts through
+     * insertRunesFromUserInput).
+     */
+    @Test
+    void testPasteKeyInsertsPastedText() {
+        Textarea textarea = new Textarea();
+        textarea.setWidth(80);
+        textarea.setHeight(10);
+        textarea.focus();
+
+        textarea.update(new KeyPressMessage(
+            new Key(KeyType.KeyRunes, "hi there".toCharArray(), false, true)));
+
+        assertEquals("hi there", textarea.value(), "A paste key should insert its text");
     }
 }

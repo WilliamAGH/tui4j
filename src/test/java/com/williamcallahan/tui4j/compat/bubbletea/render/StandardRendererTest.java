@@ -148,4 +148,31 @@ class StandardRendererTest {
 
         assertThat(out.toString()).isEqualTo(Code.copyToClipboard(text));
     }
+
+    /**
+     * Verifies {@code stop()} renders the final frame and then clears the line the way upstream
+     * does, so the shell prompt replaces the final row instead of appearing under it.
+     * <p>
+     * Upstream: github.com/charmbracelet/bubbletea/standard_renderer.go {@code stop} calls
+     * {@code flush()} and then executes {@code EraseEntireLine} ({@code ESC[2K}) followed by
+     * {@code "\r"}; {@code tea.Program.shutdown} writes nothing else after that.
+     * Verified from a PTY with a terminal emulator: upstream's final screen leaves the view's
+     * last row erased with the cursor at its start, where tui4j kept the row and moved down.
+     */
+    @Test
+    @DisplayName("stop renders the final frame then clears the line like standard_renderer.stop")
+    void test_StopRendersFinalFrameThenClearsLine() {
+        StringWriter out = new StringWriter();
+        Terminal terminal = newFakeTerminal(out);
+        StandardRenderer renderer = new StandardRenderer(terminal);
+
+        renderer.start();
+        renderer.write("line one\nline two\nline three");
+        renderer.stop();
+
+        String output = out.toString();
+        assertThat(output).contains("line three");
+        assertThat(output).endsWith("\u001b[2K\r");
+        assertThat(output.indexOf("\u001b[2K")).isGreaterThan(output.indexOf("line three"));
+    }
 }

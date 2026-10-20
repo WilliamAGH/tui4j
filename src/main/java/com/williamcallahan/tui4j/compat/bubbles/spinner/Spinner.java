@@ -7,6 +7,7 @@ import com.williamcallahan.tui4j.compat.bubbletea.UpdateResult;
 import com.williamcallahan.tui4j.compat.lipgloss.Style;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Port of Bubbles spinner.
@@ -14,9 +15,17 @@ import java.time.LocalDateTime;
  */
 public class Spinner implements Model {
 
+    /**
+     * Sequence for per-instance spinner identifiers.
+     * <p>
+     * Upstream keeps a package counter so each spinner only consumes the tick
+     * messages it produced itself (bubbles/spinner/spinner.go nextID).
+     */
+    private static final AtomicInteger LAST_ID = new AtomicInteger(0);
+
     private SpinnerType type;
     private int frame;
-    private int id;
+    private final int id;
     private int tag;
     private Style style = Style.newStyle();
 
@@ -27,6 +36,7 @@ public class Spinner implements Model {
      */
     public Spinner(SpinnerType type) {
         this.type = type;
+        this.id = nextId();
     }
 
     /**
@@ -91,5 +101,15 @@ public class Spinner implements Model {
      */
     public Message tick() {
         return new TickMessage(LocalDateTime.now(), tag, id);
+    }
+
+    /**
+     * Allocates the next process-wide spinner identifier, so every spinner instance
+     * receives a distinct id that scopes tick messages to its own producer.
+     *
+     * @return unique spinner id
+     */
+    private static int nextId() {
+        return LAST_ID.incrementAndGet();
     }
 }

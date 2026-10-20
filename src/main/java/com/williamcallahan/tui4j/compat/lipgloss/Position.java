@@ -35,4 +35,40 @@ public final class Position {
     public double value() {
         return Math.min(1, Math.max(0, this.value));
     }
+
+    /**
+     * Compares positions by value, matching upstream where {@code Position} is a
+     * float and the constants alias by value ({@code Top == Left == 0} and
+     * {@code Bottom == Right == 1}).
+     * <p>
+     * Identity comparison would send an aliased position such as
+     * {@code Position.Right} used on the vertical axis to the middle branch of
+     * {@link Renderer#placeVertical} and
+     * {@link com.williamcallahan.tui4j.compat.lipgloss.align.AlignmentDecorator#alignTextVertical},
+     * which diverges from upstream (it aligns or places at the opposite end).
+     *
+     * @param other object to compare
+     * @return true when the other object is a position with the same value
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof Position position)) {
+            return false;
+        }
+        return value == position.value;
+    }
+
+    /**
+     * Returns a hash consistent with {@link #equals(Object)}.
+     *
+     * @return hash of the position value
+     */
+    @Override
+    public int hashCode() {
+        // Adding zero normalizes -0.0 to 0.0, which equals treats as the same value.
+        return Double.hashCode(value + 0.0);
+    }
 }

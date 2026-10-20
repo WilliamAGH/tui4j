@@ -426,6 +426,22 @@ class TableTest {
         assertThat(actual).isEqualTo(expected);
     }
 
+    /**
+     * Upstream {@code table.DefaultStyles} renders the selected row with
+     * {@code Bold(true).Foreground(lipgloss.Color("212"))}; the default style
+     * must keep that ANSI-256 pink so default tables match bubbles output.
+     */
+    @Test
+    void testDefaultSelectedStyleHasUpstreamForeground() {
+        TerminalInfo.provide(() -> new TerminalInfo(true, new NoColor()));
+        com.williamcallahan.tui4j.compat.lipgloss.Renderer.defaultRenderer()
+                .setColorProfile(ColorProfile.ANSI256);
+
+        String rendered = Styles.defaultStyles().selected().render("row");
+
+        assertThat(rendered).contains("38;5;212");
+    }
+
     private static String readResource(String path) {
         try (InputStream input = TableTest.class.getClassLoader().getResourceAsStream(path)) {
             if (input == null) {
