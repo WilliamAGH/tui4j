@@ -308,8 +308,8 @@ public class Tree implements Node {
     /**
      * Sets the root value of this tree.
      * <p>
-     * A node value adopts that node's root value and children, matching upstream, where
-     * {@code SetValue} delegates to {@code Root}.
+     * A tree value adopts that tree's root value and children. Other nodes use their
+     * string representation, matching {@code Root} in Lip Gloss v1.0.0.
      * Lipgloss: tree/tree.go.
      *
      * @param value value to set
@@ -331,7 +331,7 @@ public class Tree implements Node {
                 this.value = tree.value();
                 child(tree.children());
             }
-            case Node node -> this.value = node.value();
+            case Node node -> this.value = node.toString();
             case String string -> this.value = string;
             case null, default -> this.value = "" + root;
         }

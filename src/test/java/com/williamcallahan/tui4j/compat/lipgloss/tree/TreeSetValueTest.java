@@ -13,13 +13,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests {@link Tree#setValue(Object)} against the upstream contract it ports.
  * <p>
- * Upstream: github.com/charmbracelet/lipgloss/tree/tree.go ({@code Tree.SetValue} delegates to
- * {@code Tree.Root}, so setting a node value adopts the subtree's root value and children).
- * Verified against Go 1.26 with lipgloss v1.1.0:
- * {@code t := tree.New(); t.SetValue(tree.Root("I am groot").Child("leaves"))} yields
- * {@code Value() == "I am groot"}, {@code Children().Length() == 1}, and
- * {@code String() == "I am groot\n└── leaves"}; {@code SetValue} of a leaf or a plain string
- * yields that value unchanged.
+ * Upstream: github.com/charmbracelet/lipgloss/tree/tree.go, Lip Gloss v1.0.0.
+ * Java {@code setValue} delegates to {@code root}: tree values adopt their root value and
+ * children, while other nodes use their string representation, matching upstream Root.
  */
 class TreeSetValueTest {
 
@@ -73,5 +69,23 @@ class TreeSetValueTest {
         // then
         assertThat(tree.value()).isEqualTo("Leafy");
         assertThat(tree.render()).isEqualTo("Leafy");
+    }
+
+    /**
+     * Preserves the non-tree node's string representation, as upstream Root does.
+     */
+    @Test
+    void testSetValueWithANodeUsesItsStringRepresentation() {
+        Node node = new Leaf("Stored value") {
+            /**
+             * Supplies the node's display text independently of its stored value.
+             */
+            @Override
+            public String toString() {
+                return "Rendered node";
+            }
+        };
+
+        assertThat(new Tree().setValue(node).render()).isEqualTo("Rendered node");
     }
 }
