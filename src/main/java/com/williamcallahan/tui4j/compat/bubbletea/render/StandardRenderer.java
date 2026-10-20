@@ -30,6 +30,7 @@ public class StandardRenderer implements Renderer {
 
     private volatile boolean isRunning = false;
     private final ScheduledExecutorService ticker;
+    private final Terminal terminal;
     private final long frameTime;
     private int width;
     private int height;
@@ -54,6 +55,7 @@ public class StandardRenderer implements Renderer {
      * @param fps frames per second (clamped to 1-120)
      */
     public StandardRenderer(Terminal terminal, int fps) {
+        this.terminal = terminal;
         this.frameTime = 1000 / Math.clamp(fps, 1, 120);
         this.rendererFlush = new RendererFlush(terminal);
         this.ticker = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -316,7 +318,7 @@ public class StandardRenderer implements Renderer {
     // Bubble Tea: seeks to replicate bubbletea/standard_renderer.go handleMessages
     // behavior.
     public void handleMessage(Message msg) {
-        WindowSizeMessage wsm = RendererMessageDispatcher.dispatch(msg, this, rendererFlush);
+        WindowSizeMessage wsm = RendererMessageDispatcher.dispatch(msg, this, rendererFlush, terminal);
         if (wsm != null) {
             this.width = wsm.width();
             this.height = wsm.height();

@@ -12,6 +12,7 @@ import com.williamcallahan.tui4j.message.CopyToClipboardMessage;
 import com.williamcallahan.tui4j.message.ResetMouseCursorMessage;
 import com.williamcallahan.tui4j.message.SetMouseCursorPointerMessage;
 import com.williamcallahan.tui4j.message.SetMouseCursorTextMessage;
+import org.jline.terminal.Terminal;
 
 /**
  * Routes renderer-bound messages to the appropriate handler methods.
@@ -35,7 +36,7 @@ final class RendererMessageDispatcher {
      * @param flush    flush pipeline for buffer-related operations
      * @return window size message for caller handling, or null
      */
-    static WindowSizeMessage dispatch(Message msg, Renderer renderer, RendererFlush flush) {
+    static WindowSizeMessage dispatch(Message msg, Renderer renderer, RendererFlush flush, Terminal terminal) {
         Message resolved = (msg instanceof MessageShim shim) ? shim.toMessage() : msg;
 
         if (resolved instanceof PrintLineMessage m) {
@@ -45,14 +46,17 @@ final class RendererMessageDispatcher {
         } else if (resolved instanceof EnableMouseCellMotionMessage) {
             renderer.enableMouseCellMotion();
             renderer.enableMouseSGRMode();
+            trackMouse(terminal, Terminal.MouseTracking.Normal);
         } else if (resolved instanceof EnableMouseAllMotionMessage) {
             renderer.enableMouseAllMotion();
             renderer.enableMouseSGRMode();
+            trackMouse(terminal, Terminal.MouseTracking.Any);
         } else if (resolved instanceof DisableMouseMessage) {
             renderer.disableMouseSGRMode();
             renderer.disableMouseNormalTracking();
             renderer.disableMouseCellMotion();
             renderer.disableMouseAllMotion();
+            trackMouse(terminal, Terminal.MouseTracking.Off);
         } else if (resolved instanceof SetMouseCursorTextMessage) {
             renderer.setMouseCursorText();
         } else if (resolved instanceof SetMouseCursorPointerMessage) {
@@ -65,5 +69,21 @@ final class RendererMessageDispatcher {
             return wsm;
         }
         return null;
+    }
+
+    /**
+     * Mirrors the ANSI mouse mode onto JLine's terminal. On Windows the console mouse mode is a
+     * Windows API flag, not an ANSI sequence, so writing {@code ?1002h} alone never delivers
+     * mouse events to the reader.
+     */
+    private static void trackMouse(Terminal terminal, Terminal.MouseTracking tracking) {
+        if (terminal == null) {
+            return;
+        }
+        try {
+            terminal.trackMouse(tracking);
+        } catch (RuntimeException ignored) {
+            // Best-effort: unsupported terminals keep the ANSI-only behavior.
+        }
     }
 }
