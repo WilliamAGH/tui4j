@@ -45,11 +45,11 @@ public final class ANSI256Color implements TerminalColor, RGBSupplier {
     public ANSIColor toANSIColor() {
         int ansiColorCode = 0;
         float minDistance = Float.MAX_VALUE;
-        RGB rgb = RGB.fromHexString(ANSIColors.ANSI_HEX[colorCode]);
+        HSLuv source = HSLuv.fromRgb(RGB.fromHexString(ANSIColors.ANSI_HEX[colorCode]));
 
         for (int colorIndex = 0; colorIndex <= 15; colorIndex++) {
             RGB candidate = RGB.fromHexString(ANSIColors.ANSI_HEX[colorIndex]);
-            float distance = rgb.distanceHSLuv(candidate);
+            float distance = (float) source.distanceTo(HSLuv.fromRgb(candidate));
 
             if (distance < minDistance) {
                 minDistance = distance;
