@@ -76,6 +76,8 @@ class StringWidthTest {
                 Arguments.of("warning + VS16 (U+26A0 U+FE0F)", "\u26A0\uFE0F", 2),
                 Arguments.of("check mark + VS16 (U+2714 U+FE0F)", "\u2714\uFE0F", 2),
                 Arguments.of("gear + VS16 (U+2699 U+FE0F)", "\u2699\uFE0F", 2),
+                Arguments.of("heart + VS16 (U+2764 U+FE0F)", "\u2764\uFE0F", 2),
+                Arguments.of("non-pictographic letter + VS16", "\u00E9\uFE0F", 1),
                 // East Asian Width = Ambiguous or Neutral renders narrow outside East Asia.
                 Arguments.of("circle half black (U+25D0, ambiguous)", "\u25D0", 1),
                 Arguments.of("box drawing (U+2500, ambiguous)", "\u2500", 1),

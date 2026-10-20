@@ -151,9 +151,10 @@ public final class GraphemeCluster {
     /**
      * GRAPHEME_WIDTH: Treats the cluster as a single unit for width calculation.
      * <p>
-     * U+FE0F requests the emoji glyph, which terminals draw in two cells even
-     * when the base code point is East Asian Neutral (⚠️, ✔️, ⚙️, ❤️). The check
-     * sits after the zero-width guard so that a cluster that segmenters split
+     * U+FE0F requests the emoji glyph for an Extended_Pictographic base, which
+     * terminals draw in two cells even when East Asian Neutral (⚠️, ✔️, ⚙️, ❤️).
+     * Matches https://github.com/rivo/uniseg/blob/v0.4.7/grapheme.go.
+     * The check sits after the zero-width guard so that a cluster that segmenters split
      * after an ASCII base (the keycaps 1️⃣, #️⃣) is not counted twice.
      */
     private static int calculateGraphemeWidth(String cluster) {
@@ -174,8 +175,9 @@ public final class GraphemeCluster {
             return 2;
         }
 
-        // U+FE0F selects the two-cell emoji glyph for an otherwise-narrow base.
-        if (cluster.length() > 1 && cluster.indexOf(VARIATION_SELECTOR_16) >= 0) {
+        // VS16 only changes presentation for an extended-pictographic base.
+        if (UCharacter.hasBinaryProperty(codePoint, UProperty.EXTENDED_PICTOGRAPHIC)
+                && cluster.indexOf(VARIATION_SELECTOR_16) >= 0) {
             return 2;
         }
 
