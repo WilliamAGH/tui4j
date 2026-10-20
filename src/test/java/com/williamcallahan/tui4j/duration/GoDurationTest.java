@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests Go duration formatting.
  * <p>
  * Expected values are the output of Go's {@code time.Duration.String()}
- * (go1.26, {@code go/src/time/format.go}).
+ * (go1.26, {@code src/time/time.go}).
  * tui4j: src/test/java/com/williamcallahan/tui4j/duration/GoDurationTest.java
  */
 class GoDurationTest {
@@ -23,6 +23,13 @@ class GoDurationTest {
     @MethodSource("durationCases")
     void testFormatMatchesGoDurationString(long nanos, String expected) {
         assertThat(GoDuration.format(Duration.ofNanos(nanos))).isEqualTo(expected);
+    }
+
+    /** Verifies the minimum nanosecond value retains its full unsigned magnitude. */
+    @Test
+    void testMinimumDurationMatchesGoDurationString() {
+        assertThat(GoDuration.format(Duration.ofNanos(Long.MIN_VALUE)))
+            .isEqualTo("-2562047h47m16.854775808s");
     }
 
     /**

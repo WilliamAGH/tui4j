@@ -11,7 +11,8 @@ import java.time.Duration;
  * {@code 1h0m1s}). Owning that translation here keeps both ports on one
  * implementation of the Go format contract.
  * <p>
- * Go reference: {@code go/src/time/format.go} ({@code Duration.String}).
+ * Go reference: <a href="https://raw.githubusercontent.com/golang/go/go1.26.0/src/time/time.go">
+ * {@code src/time/time.go}</a> ({@code Duration.String}).
  * tui4j: src/main/java/com/williamcallahan/tui4j/duration/GoDuration.java
  */
 public final class GoDuration {
@@ -43,10 +44,11 @@ public final class GoDuration {
     public static String format(Duration duration) {
         long nanos = duration.toNanos();
         boolean negative = nanos < 0;
-        long value = Math.abs(nanos);
+        // Use an unsigned magnitude, including the bit pattern for -Long.MIN_VALUE.
+        long value = negative ? -nanos : nanos;
 
         StringBuilder result = new StringBuilder();
-        if (value < NANOS_PER_SECOND) {
+        if (Long.compareUnsigned(value, NANOS_PER_SECOND) < 0) {
             if (value == 0) {
                 return "0s";
             }
@@ -87,8 +89,8 @@ public final class GoDuration {
 
     /** Appends seconds, then the minute and hour units Go keeps when non-zero. */
     private static void appendSeconds(StringBuilder result, long nanos) {
-        long seconds = nanos / NANOS_PER_SECOND;
-        long fraction = nanos % NANOS_PER_SECOND;
+        long seconds = Long.divideUnsigned(nanos, NANOS_PER_SECOND);
+        long fraction = Long.remainderUnsigned(nanos, NANOS_PER_SECOND);
 
         StringBuilder secondsPart = new StringBuilder();
         secondsPart.append(seconds % 60);
