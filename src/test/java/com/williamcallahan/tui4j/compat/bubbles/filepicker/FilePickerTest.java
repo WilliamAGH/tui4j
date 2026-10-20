@@ -8,6 +8,7 @@ import com.williamcallahan.tui4j.compat.bubbletea.input.key.KeyType;
 import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -162,5 +163,35 @@ class FilePickerTest {
 
         assertFalse(filePicker.showPermissions());
         assertFalse(filePicker.showSize());
+    }
+
+    /**
+     * A failed target lookup must not be reported as a selectable file.
+     */
+    @Test
+    void testDanglingSymlinkIsNotSelectedByQuery(@TempDir Path dir) throws Exception {
+        Files.createSymbolicLink(dir.resolve("link"), Path.of("missing-target"));
+        filePicker.setCurrentDirectory(dir.toString());
+        filePicker.update(filePicker.init().execute());
+        KeyPressMessage enter = new KeyPressMessage(new Key(KeyType.keyCR));
+
+        assertFalse(filePicker.didSelectFile(enter));
+        assertFalse(filePicker.didSelectDirectory(enter));
+        assertNull(filePicker.selectedPath());
+    }
+
+    /**
+     * Enter must leave selection and navigation unchanged for a dangling link.
+     */
+    @Test
+    void testDanglingSymlinkIsNotSelectedByEnter(@TempDir Path dir) throws Exception {
+        Files.createSymbolicLink(dir.resolve("link"), Path.of("missing-target"));
+        filePicker.setCurrentDirectory(dir.toString());
+        filePicker.update(filePicker.init().execute());
+
+        filePicker.update(new KeyPressMessage(new Key(KeyType.keyCR)));
+
+        assertNull(filePicker.selectedPath());
+        assertEquals(dir.toString(), filePicker.currentDirectory());
     }
 }

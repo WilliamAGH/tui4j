@@ -4,6 +4,8 @@ import com.williamcallahan.tui4j.compat.bubbletea.Command;
 import com.williamcallahan.tui4j.compat.bubbletea.Message;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -80,5 +82,19 @@ class FilePickerRenderTest {
         String view = pickerAt(dir).view();
 
         assertThat(view).contains("   500B");
+    }
+
+    /**
+     * A nonpositive size-column width must leave the selected label unpadded.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1})
+    void testSelectedRowWithNonpositiveSizeWidth(int width, @TempDir Path dir) throws Exception {
+        Files.write(dir.resolve("only.bin"), new byte[500]);
+        FilePicker picker = pickerAt(dir);
+        picker.setShowPermissions(false);
+        picker.styles().fileSize().width(width);
+
+        assertThat(picker.view()).startsWith(">500B only.bin\n");
     }
 }

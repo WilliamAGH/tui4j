@@ -1,5 +1,8 @@
 package com.williamcallahan.tui4j.compat.bubbles.filepicker;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 /**
  * Cursor and visible-window state of the file picker.
  * <p>
@@ -17,9 +20,9 @@ final class FilePickerWindow {
     private int selected;
     private int min;
     private int max;
-    private final IntStack selectedStack = new IntStack();
-    private final IntStack minStack = new IntStack();
-    private final IntStack maxStack = new IntStack();
+    private final Deque<Integer> selectedStack = new ArrayDeque<>();
+    private final Deque<Integer> minStack = new ArrayDeque<>();
+    private final Deque<Integer> maxStack = new ArrayDeque<>();
 
     /**
      * Applies an explicit picker height, shrinking the window when it no
@@ -140,7 +143,7 @@ final class FilePickerWindow {
      *
      * @return selection stack
      */
-    IntStack selectedStack() {
+    Deque<Integer> selectedStack() {
         return selectedStack;
     }
 
@@ -149,7 +152,7 @@ final class FilePickerWindow {
      *
      * @return minimum stack
      */
-    IntStack minStack() {
+    Deque<Integer> minStack() {
         return minStack;
     }
 
@@ -158,7 +161,7 @@ final class FilePickerWindow {
      *
      * @return maximum stack
      */
-    IntStack maxStack() {
+    Deque<Integer> maxStack() {
         return maxStack;
     }
 }

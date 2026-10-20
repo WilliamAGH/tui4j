@@ -6,7 +6,6 @@ import com.williamcallahan.tui4j.compat.bubbletea.ErrorMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.UpdateResult;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -66,7 +65,7 @@ final class FilePickerKeys {
             picker.currentDirectory(current.getRoot().toString());
         }
         // Relative path with no parent stays unchanged
-        if (picker.window().selectedStack().length() > 0) {
+        if (!picker.window().selectedStack().isEmpty()) {
             picker.window().selected(picker.window().selectedStack().pop());
             picker.window().min(picker.window().minStack().pop());
             picker.window().max(picker.window().maxStack().pop());
@@ -185,20 +184,11 @@ final class FilePickerKeys {
         }
 
         DirEntry f = picker.files().get(picker.window().selected());
-        boolean isDir = f.isDir();
-
-        if (f.isSymlink()) {
-            try {
-                Path linkPath = Paths.get(picker.currentDirectory(), f.name());
-                Path symlinkTarget = Files.readSymbolicLink(linkPath);
-                Path resolved = linkPath
-                    .getParent()
-                    .resolve(symlinkTarget)
-                    .normalize();
-                isDir = Files.isDirectory(resolved);
-            } catch (IOException e) {
-                return UpdateResult.from(picker, () -> new ErrorMessage(e));
-            }
+        boolean isDir;
+        try {
+            isDir = FilePickerSelection.resolvesToDirectory(picker, f);
+        } catch (IOException e) {
+            return UpdateResult.from(picker, () -> new ErrorMessage(e));
         }
 
         if (

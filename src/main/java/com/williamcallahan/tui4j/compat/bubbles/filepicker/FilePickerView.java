@@ -48,10 +48,9 @@ final class FilePickerView {
             return sb.toString();
         }
 
-        for (int i = 0; i < files.size(); i++) {
-            if (i < picker.window().min() || i > picker.window().max()) {
-                continue;
-            }
+        int first = Math.max(0, picker.window().min());
+        int last = Math.min(files.size() - 1, picker.window().max());
+        for (int i = first; i <= last; i++) {
             DirEntry f = files.get(i);
             boolean disabled = !picker.canSelect(f.name()) && !f.isDir();
             sb.append(renderRow(picker, i, f, disabled));
@@ -151,7 +150,7 @@ final class FilePickerView {
     private static String paddedSize(long size, FilePicker picker) {
         String label = HumanBytes.format(size);
         int width = picker.styles().fileSize().getWidth();
-        return String.format("%" + Math.max(0, width) + "s", label);
+        return width > 0 ? String.format("%" + width + "s", label) : label;
     }
 
     /**

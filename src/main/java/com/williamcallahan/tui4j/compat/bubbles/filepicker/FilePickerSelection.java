@@ -5,8 +5,8 @@ import com.williamcallahan.tui4j.compat.bubbles.key.Binding;
 import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,7 +44,13 @@ final class FilePickerSelection {
         }
 
         DirEntry f = files.get(picker.window().selected());
-        boolean isDir = resolvesToDirectory(picker, f);
+        boolean isDir;
+        try {
+            isDir = resolvesToDirectory(picker, f);
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Failed to resolve symlink for " + f.name(), e);
+            return false;
+        }
         boolean selectable = (!isDir && picker.fileAllowed())
             || (isDir && picker.dirAllowed());
 
@@ -75,36 +81,30 @@ final class FilePickerSelection {
         }
 
         DirEntry f = files.get(picker.window().selected());
-        return resolvesToDirectory(picker, f);
+        try {
+            return resolvesToDirectory(picker, f);
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Failed to resolve symlink for " + f.name(), e);
+            return false;
+        }
     }
 
     /**
      * Resolves the entry's directory status, following symlink targets like
-     * upstream's {@code filepath.EvalSymlinks} branch.
+     * upstream's {@code filepath.EvalSymlinks}/{@code os.Stat} branch.
+     * Upstream: https://github.com/charmbracelet/bubbles/blob/v0.21.0/filepicker/filepicker.go
      *
      * @param picker model providing the current directory
      * @param f      entry to classify
      * @return true when the entry is a directory or a symlink to one
+     * @throws IOException when the symlink target cannot be read
      */
-    static boolean resolvesToDirectory(FilePicker picker, DirEntry f) {
-        if (f.isDir()) {
-            return true;
-        }
+    static boolean resolvesToDirectory(FilePicker picker, DirEntry f) throws IOException {
         if (!f.isSymlink()) {
-            return false;
+            return f.isDir();
         }
-        try {
-            Path linkPath = Paths.get(picker.currentDirectory(), f.name());
-            Path symlinkTarget = Files.readSymbolicLink(linkPath);
-            Path resolved = linkPath.getParent().resolve(symlinkTarget).normalize();
-            return Files.isDirectory(resolved);
-        } catch (IOException e) {
-            logger.log(
-                Level.WARNING,
-                "Failed to resolve symlink for " + f.name(),
-                e
-            );
-            return false;
-        }
+        return Files.readAttributes(
+            Paths.get(picker.currentDirectory(), f.name()), BasicFileAttributes.class
+        ).isDirectory();
     }
 }
