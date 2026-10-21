@@ -2,6 +2,8 @@ package com.williamcallahan.tui4j.compat.x.ansi;
 
 import java.nio.charset.StandardCharsets;
 
+import com.ibm.icu.lang.UCharacter;
+
 /**
  * Shared helpers for ANSI-aware wrapping operations.
  * <p>
@@ -36,12 +38,16 @@ final class WrapSupport {
 
     /**
      * Reports whether the given code point is whitespace.
+     * <p>
+     * Upstream uses Go's {@code unicode.IsSpace}, which follows the Unicode
+     * White_Space property. {@code UCharacter.isWhitespace} mirrors Java's class
+     * and excludes U+0085 (NEL), which upstream treats as a breakable space.
      *
      * @param codePoint code point to test
      * @return true when whitespace
      */
     static boolean isWhitespace(int codePoint) {
-        return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint);
+        return UCharacter.isUWhiteSpace(codePoint);
     }
 
     /**

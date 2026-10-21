@@ -11,7 +11,6 @@ import java.util.function.Function;
 /**
  * Timer-based command implementations for {@link Command#tick} and {@link Command#every}.
  * <p>
- * Extracted from {@link Command} to satisfy the 350-line ceiling [LOC1a].
  * Port of github.com/charmbracelet/bubbletea/commands.go (tick/every).
  */
 final class CommandTimer {

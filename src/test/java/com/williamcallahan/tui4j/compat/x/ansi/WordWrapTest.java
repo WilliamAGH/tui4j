@@ -132,6 +132,28 @@ class WordWrapTest {
         assertEquals("hello🎄world", result, "Should not break at 🎄 (not in breakpoints)");
     }
 
+    /**
+     * U+0085 (NEL) is Unicode White_Space, which is what upstream's unicode.IsSpace
+     * uses, so it breaks a word like an ASCII space does.
+     */
+    @Test
+    void testNelIsBreakableWhitespace() {
+        assertEquals("ab\ncd", WordWrap.wordWrap("ab\u0085cd", 2, ""),
+                "NEL should break the word like a space");
+        assertEquals("你c\nced\n你d", WordWrap.wordWrapWc("你c  ced\u0085你d", 5, ""),
+                "NEL should break the wide-character line like a space");
+    }
+
+    /**
+     * U+00A0 (NBSP) is whitespace but never a breakable one, so it stays inside
+     * the word and the line is not split there.
+     */
+    @Test
+    void testNbspIsNotBreakableWhitespace() {
+        assertEquals("ab\u00a0cd", WordWrap.wordWrap("ab\u00a0cd", 2, ""),
+                "NBSP should stay inside the word");
+    }
+
     /** Test case for word wrap. */
     private static final class Case {
         private final String name;

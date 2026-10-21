@@ -32,7 +32,6 @@ public class OldLaggyInputHandler implements InputHandler {
     private final Consumer<Message> messageConsumer;
     private volatile boolean running;
     private final ExecutorService inputExecutor;
-    private volatile boolean altPressed = false;
 
     // Buffer for handling escape sequences
     private static final int READ_TIMEOUT_MS = 50;
@@ -108,11 +107,7 @@ public class OldLaggyInputHandler implements InputHandler {
                     messageConsumer.accept(new KeyPressMessage(new Key(key.type(), key.runes())));
                 } else {
                     messageConsumer
-                            .accept(new KeyPressMessage(new Key(KeyType.KeyRunes, new char[] { (char) input }, altPressed)));
-                }
-
-                if (altPressed) {
-                    altPressed = false;
+                            .accept(new KeyPressMessage(new Key(KeyType.KeyRunes, new char[] { (char) input }, false)));
                 }
             }
         } catch (IOException e) {
@@ -150,8 +145,7 @@ public class OldLaggyInputHandler implements InputHandler {
             if (key != null) {
                 messageConsumer.accept(new KeyPressMessage(new Key(key.type())));
             } else {
-                altPressed = true;
-                messageConsumer.accept(new KeyPressMessage(new Key(KeyType.KeyRunes, new char[] { firstChar }, altPressed)));
+                messageConsumer.accept(new KeyPressMessage(new Key(KeyType.KeyRunes, new char[] { firstChar }, true)));
             }
             return;
         }
@@ -191,9 +185,6 @@ public class OldLaggyInputHandler implements InputHandler {
 
             if (ch == 27) {
                 emitKeyOrRunes(sequence);
-                if (altPressed) {
-                    altPressed = false;
-                }
                 sequence = new StringBuilder();
             }
             sequence.append((char) ch);
@@ -218,7 +209,7 @@ public class OldLaggyInputHandler implements InputHandler {
             messageConsumer.accept(new KeyPressMessage(key));
         } else {
             messageConsumer.accept(
-                    new KeyPressMessage(new Key(KeyType.KeyRunes, sequence.toString().toCharArray(), altPressed)));
+                    new KeyPressMessage(new Key(KeyType.KeyRunes, sequence.toString().toCharArray(), false)));
         }
     }
 

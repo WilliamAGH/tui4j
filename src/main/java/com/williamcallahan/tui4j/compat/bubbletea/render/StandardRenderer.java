@@ -10,6 +10,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.jline.terminal.Terminal;
+import org.jline.terminal.impl.AbstractWindowsTerminal;
 
 /**
  * Default renderer backed by JLine.
@@ -22,6 +23,7 @@ public class StandardRenderer implements Renderer {
 
     private volatile boolean isRunning = false;
     private final ScheduledExecutorService ticker;
+    private final Terminal terminal;
     private final long frameTime;
     private int width;
     private int height;
@@ -46,6 +48,7 @@ public class StandardRenderer implements Renderer {
      * @param fps frames per second (clamped to 1-120)
      */
     public StandardRenderer(Terminal terminal, int fps) {
+        this.terminal = terminal;
         this.frameTime = 1000 / Math.clamp(fps, 1, 120);
         this.rendererFlush = new RendererFlush(terminal);
         this.ticker = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -82,6 +85,7 @@ public class StandardRenderer implements Renderer {
     // Bubble Tea: seeks to replicate bubbletea/standard_renderer.go stop behavior.
     public void stop() {
         flush();
+        rendererFlush.moveBelowFrame();
         isRunning = false;
         try {
             ticker.shutdownNow();
@@ -125,6 +129,7 @@ public class StandardRenderer implements Renderer {
     // enableMouseCellMotion behavior.
     public void enableMouseCellMotion() {
         rendererFlush.writeToTerminal(Code.EnableMouseCellMotion.value());
+        trackConsoleMouse(Terminal.MouseTracking.Button);
     }
 
     @Override
@@ -132,16 +137,19 @@ public class StandardRenderer implements Renderer {
     // disableMouseCellMotion behavior.
     public void disableMouseCellMotion() {
         rendererFlush.writeToTerminal(Code.DisableMouseCellMotion.value());
+        trackConsoleMouse(Terminal.MouseTracking.Off);
     }
 
     @Override
     public void enableMouseNormalTracking() {
         rendererFlush.writeToTerminal(Code.EnableMouseNormalTracking.value());
+        trackConsoleMouse(Terminal.MouseTracking.Normal);
     }
 
     @Override
     public void disableMouseNormalTracking() {
         rendererFlush.writeToTerminal(Code.DisableMouseNormalTracking.value());
+        trackConsoleMouse(Terminal.MouseTracking.Off);
     }
 
     @Override
@@ -149,6 +157,7 @@ public class StandardRenderer implements Renderer {
     // enableMouseAllMotion behavior.
     public void enableMouseAllMotion() {
         rendererFlush.writeToTerminal(Code.EnableMouseAllMotion.value());
+        trackConsoleMouse(Terminal.MouseTracking.Any);
     }
 
     @Override
@@ -156,6 +165,24 @@ public class StandardRenderer implements Renderer {
     // disableMouseAllMotion behavior.
     public void disableMouseAllMotion() {
         rendererFlush.writeToTerminal(Code.DisableMouseAllMotion.value());
+        trackConsoleMouse(Terminal.MouseTracking.Off);
+    }
+
+    /**
+     * Mirrors the mouse mode onto the Windows console input mode.
+     * <p>
+     * The Windows console delivers mouse input only while {@code ENABLE_MOUSE_INPUT} is set, which
+     * JLine toggles through {@link Terminal#trackMouse}; the ANSI mode sequences alone never reach
+     * its reader. POSIX terminals are left to the ANSI sequences, because JLine's POSIX
+     * {@code trackMouse} writes its own {@code ?1005}/{@code ?1000} modes that would replace the
+     * SGR encoding and cell-motion mode written here.
+     *
+     * @param tracking mouse events the console should report
+     */
+    private void trackConsoleMouse(Terminal.MouseTracking tracking) {
+        if (terminal instanceof AbstractWindowsTerminal) {
+            terminal.trackMouse(tracking);
+        }
     }
 
     @Override

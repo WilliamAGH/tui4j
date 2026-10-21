@@ -48,7 +48,7 @@ public class MarginDecorator {
             padded = padRight(padded, rightMargin, attributedStyle, renderer);
         }
 
-        int width = TextLines.fromText(input).widestLineLength();
+        int width = TextLines.fromText(padded).widestLineLength();
         String spaces = " ".repeat(width);
         if (attributedStyle != null) {
             spaces = new AttributedString(spaces, attributedStyle).toAnsi(

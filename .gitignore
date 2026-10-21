@@ -70,4 +70,4 @@ settings.xml
 .cache/
 .tmp/
 
-.gradle/
+.worktrees/

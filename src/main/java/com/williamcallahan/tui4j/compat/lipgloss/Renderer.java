@@ -181,7 +181,7 @@ public class Renderer {
             int top = gap - split;
             int bottom = gap - top;
 
-            builder.append((emptyLine + "\n").repeat(gap)).append(input);
+            builder.append((emptyLine + "\n").repeat(top)).append(input);
 
             for (int i = 0; i < bottom; i++) {
                 builder.append('\n').append(emptyLine);

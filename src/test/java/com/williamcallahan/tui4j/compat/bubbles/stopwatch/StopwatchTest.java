@@ -164,4 +164,49 @@ class StopwatchTest {
         Stopwatch stopwatch2 = new Stopwatch();
         assertThat(stopwatch1.id()).isNotEqualTo(stopwatch2.id());
     }
+
+    /**
+     * Upstream {@code stopwatch.Update} matches {@code msg.ID != m.id} strictly,
+     * unlike the spinner ({@code ID > 0}) and timer ({@code ID != 0}) which accept
+     * an unset-id sentinel: broadcasting hand-built id-0 messages must not drive
+     * a stopwatch.
+     */
+    @Test
+    void testStartStopMessageWithUnsetIdIsIgnored() {
+        Stopwatch stopwatch = new Stopwatch();
+
+        stopwatch.update(new StartStopMessage(0, true));
+
+        assertThat(stopwatch.running()).isFalse();
+    }
+
+    /**
+     * A broadcast id-0 tick must not advance the elapsed time; upstream rejects
+     * it because {@code msg.ID != m.id} and component ids start at 1.
+     */
+    @Test
+    void testTickMessageWithUnsetIdIsIgnored() {
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.update(new StartStopMessage(stopwatch.id(), true));
+        Duration before = stopwatch.elapsed();
+
+        stopwatch.update(new TickMessage(0, 0));
+
+        assertThat(stopwatch.elapsed()).isEqualTo(before);
+    }
+
+    /**
+     * A broadcast id-0 reset must not clear the elapsed time; upstream matches
+     * the reset id strictly.
+     */
+    @Test
+    void testResetMessageWithUnsetIdIsIgnored() {
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.update(new StartStopMessage(stopwatch.id(), true));
+        stopwatch.update(new TickMessage(stopwatch.id(), 0));
+
+        stopwatch.update(new ResetMessage(0));
+
+        assertThat(stopwatch.elapsed()).isNotEqualTo(Duration.ZERO);
+    }
 }

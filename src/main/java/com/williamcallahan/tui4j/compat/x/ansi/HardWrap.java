@@ -116,7 +116,7 @@ public final class HardWrap {
                     }
 
                     if (curWidth == 0) {
-                        if (!preserveSpace && forceNewline && Character.isWhitespace((char) (b & 0xFF))) {
+                        if (!preserveSpace && forceNewline && WrapSupport.isWhitespace(b & 0xFF)) {
                             break;
                         }
                         forceNewline = false;

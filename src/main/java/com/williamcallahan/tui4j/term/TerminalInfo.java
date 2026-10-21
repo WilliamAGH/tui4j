@@ -1,5 +1,6 @@
 package com.williamcallahan.tui4j.term;
 
+import com.williamcallahan.tui4j.compat.lipgloss.color.NoColor;
 import com.williamcallahan.tui4j.compat.lipgloss.color.TerminalColor;
 
 /**
@@ -10,6 +11,15 @@ import com.williamcallahan.tui4j.compat.lipgloss.color.TerminalColor;
  * @param backgroundColor terminal background color
  */
 public record TerminalInfo(boolean tty, TerminalColor backgroundColor) {
+
+    /**
+     * Terminal info used while no provider is installed: not a TTY and no background color.
+     * <p>
+     * Upstream lipgloss renders plain output until a terminal is detected (piped, non-TTY
+     * stdout yields no color), so "no provider yet" must behave like "no terminal" instead of
+     * failing every style render that runs before a {@code Program} starts.
+     */
+    private static final TerminalInfo NON_TTY = new TerminalInfo(false, new NoColor());
 
     private static TerminalInfoProvider infoProvider;
 
@@ -23,11 +33,15 @@ public record TerminalInfo(boolean tty, TerminalColor backgroundColor) {
     }
 
     /**
-     * Returns terminal info from the configured provider.
+     * Returns terminal info from the configured provider, or the non-TTY default
+     * {@code (false, NoColor)} while no provider has been installed.
      *
      * @return terminal info
      */
     public static TerminalInfo get() {
+        if (infoProvider == null) {
+            return NON_TTY;
+        }
         return infoProvider.provide();
     }
 }

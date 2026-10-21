@@ -4,6 +4,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/WilliamAGH/tui4j)](https://github.com/WilliamAGH/tui4j/releases)
 [![Context7](src/main/resources/static/img/context7-badge.svg)](https://context7.com/williamagh/tui4j)
 [![DeepWiki](src/main/resources/static/img/deepwiki-badge.svg)](https://deepwiki.com/WilliamAGH/tui4j)
+[![Docs](https://img.shields.io/badge/docs-mintlify-18b884)](https://www.mintlify.com/WilliamAGH/tui4j)
 
 **TUI4J** (Terminal User Interface for Java) is a Java TUI framework inspired by [Bubble Tea](https://github.com/charmbracelet/bubbletea). It includes a compatibility module that mirrors the original Go API for developers familiar with the Charm ecosystem.
 
@@ -13,29 +14,27 @@
 
 ## Installation
 
+> Latest stable release: **0.3.3** — [view on Maven Central](https://central.sonatype.com/artifact/com.williamcallahan/tui4j) | [view on mvnrepository](https://mvnrepository.com/artifact/com.williamcallahan/tui4j)
+
 ### Maven
 
 ```xml
 <dependency>
     <groupId>com.williamcallahan</groupId>
     <artifactId>tui4j</artifactId>
-    <version>0.3.1-preview</version>
+    <version>0.3.3</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.williamcallahan:tui4j:0.3.1-preview'
+implementation 'com.williamcallahan:tui4j:0.3.3'
 ```
 
 ### Snapshots
 
-Snapshots are published to Sonatype's snapshot repository (separate from Maven Central releases):
-
-```text
-https://central.sonatype.com/repository/maven-snapshots/
-```
+Snapshots are published automatically on every push to `main` and are available from Sonatype's snapshot repository (separate from Maven Central releases).
 
 Maven:
 
@@ -52,6 +51,14 @@ Maven:
         </snapshots>
     </repository>
 </repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>com.williamcallahan</groupId>
+        <artifactId>tui4j</artifactId>
+        <version>0.3.4-SNAPSHOT</version>
+    </dependency>
+</dependencies>
 ```
 
 Gradle:
@@ -63,7 +70,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.williamcallahan:tui4j:0.3.3-SNAPSHOT")
+    implementation("com.williamcallahan:tui4j:0.3.4-SNAPSHOT")
 }
 ```
 

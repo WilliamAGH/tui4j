@@ -1,12 +1,13 @@
 package com.williamcallahan.tui4j.compat.bubbletea;
 
+import com.williamcallahan.tui4j.term.Clipboard;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Represents a command that yields a Message.
@@ -133,17 +134,40 @@ public interface Command {
 
     /**
      * Emits a line with the provided arguments.
+     * <p>
+     * The body is joined the way Go's {@code fmt.Sprint} joins {@code Println} arguments:
+     * operands keep their string form and a space separates two operands only when neither
+     * operand is a string.
+     * Bubble Tea: standard_renderer.go Println.
      *
-     * @param arguments values to join with spaces
+     * @param arguments values to join
      * @return print line command
      */
     static Command println(Object... arguments) {
-        return () ->
-            new PrintLineMessage(
-                Arrays.stream(arguments)
-                    .map(String::valueOf)
-                    .collect(Collectors.joining(" "))
-            );
+        return () -> new PrintLineMessage(formatSprint(arguments));
+    }
+
+    /**
+     * Concatenates operands with Go's {@code fmt.Sprint} spacing rule.
+     * <p>
+     * Bubble Tea: standard_renderer.go Println.
+     *
+     * @param arguments operands to concatenate
+     * @return concatenated text
+     */
+    private static String formatSprint(Object... arguments) {
+        StringBuilder body = new StringBuilder();
+        boolean previousWasString = false;
+        for (int i = 0; i < arguments.length; i++) {
+            Object argument = arguments[i];
+            boolean isString = argument instanceof String;
+            if (i > 0 && !isString && !previousWasString) {
+                body.append(' ');
+            }
+            previousWasString = isString;
+            body.append(String.valueOf(argument));
+        }
+        return body.toString();
     }
 
     /**
@@ -271,15 +295,20 @@ public interface Command {
     }
 
     /**
-     * Requests clipboard contents from the terminal.
-     * The clipboard contents are delivered as a {@link PasteMessage}.
+     * Reads the system clipboard and delivers its contents as a {@link PasteMessage}.
      * <p>
-     * Bubble Tea: bubbletea/commands.go Paste
+     * Yields {@code null} when the clipboard is unavailable or reading is disabled with
+     * {@code tui4j.clipboard.disabled}. Mirrors upstream bubbles, whose paste commands read the
+     * local clipboard inside the command and hand the text back as a paste message
+     * ({@code textinput.Paste}/{@code textarea.Paste}).
      *
      * @return paste command
      */
     static Command paste() {
-        return ReadClipboardMessage::new;
+        return () -> {
+            String content = Clipboard.tryPaste();
+            return content == null ? null : new PasteMessage(content);
+        };
     }
 
     /**

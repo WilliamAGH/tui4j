@@ -274,7 +274,7 @@ public final class WordWrap {
                             acc.resetLine();
                         }
                         default -> {
-                            if (Character.isWhitespace(ch)) {
+                            if (WrapSupport.isWhitespace(ch)) {
                                 acc.flushWord(wordLen);
                                 wordLen = 0;
                                 acc.writeSpace(bytes[i], 1);

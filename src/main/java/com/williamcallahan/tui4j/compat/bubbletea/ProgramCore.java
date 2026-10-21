@@ -199,6 +199,7 @@ final class ProgramCore {
 
         ProgramSignals.registerAll(
             config,
+            terminal,
             commandExecutor,
             this::send,
             this::sendError

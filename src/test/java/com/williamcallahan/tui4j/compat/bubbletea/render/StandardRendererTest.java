@@ -1,13 +1,18 @@
 package com.williamcallahan.tui4j.compat.bubbletea.render;
 
 import com.williamcallahan.tui4j.ansi.Code;
+import com.williamcallahan.tui4j.compat.bubbletea.EnableMouseCellMotionMessage;
 import org.jline.terminal.Terminal;
+import org.jline.terminal.impl.DumbTerminal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -147,5 +152,69 @@ class StandardRendererTest {
         renderer.copyToClipboard(text);
 
         assertThat(out.toString()).isEqualTo(Code.copyToClipboard(text));
+    }
+
+    /**
+     * Verifies {@code stop()} renders the final frame, keeps its last row, and moves below it.
+     * <p>
+     * Upstream standard_renderer.go stop erases that row; tui4j keeps it so full-frame
+     * views keep their bottom edge after exit, then starts the shell prompt on the next line.
+     */
+    @Test
+    @DisplayName("stop renders the final frame and keeps its last row")
+    void test_StopRendersFinalFrameAndKeepsLastRow() {
+        StringWriter out = new StringWriter();
+        Terminal terminal = newFakeTerminal(out);
+        StandardRenderer renderer = new StandardRenderer(terminal);
+
+        renderer.start();
+        renderer.write("line one\nline two\nline three");
+        renderer.stop();
+
+        String output = out.toString();
+        String afterFrame = output.substring(output.indexOf("line three"));
+        assertThat(afterFrame).doesNotContain("\u001b[2K");
+        assertThat(afterFrame).endsWith("\r\n");
+    }
+
+    /**
+     * Verifies {@code stop()} adds no line advance for an alternate-screen frame or before any
+     * frame was painted: the alternate screen restores the launch cursor on exit, and a program
+     * that rendered nothing must not emit stray output.
+     */
+    @Test
+    @DisplayName("stop adds no line advance in the alternate screen or before any frame")
+    void test_StopAddsNoAdvanceWithoutNormalScreenFrame() {
+        StringWriter unpainted = new StringWriter();
+        new StandardRenderer(newFakeTerminal(unpainted)).stop();
+        assertThat(unpainted.toString()).isEmpty();
+
+        RendererTestTerminal alternate = new RendererTestTerminal(20, 5);
+        StandardRenderer renderer = new StandardRenderer(alternate.terminal());
+        renderer.start();
+        renderer.enterAltScreen();
+        renderer.write("alt frame");
+        renderer.stop();
+        assertThat(alternate.drain()).contains("alt frame").doesNotEndWith("\r\n");
+    }
+
+    /**
+     * Verifies that enabling cell motion on a POSIX terminal emits only tui4j's own mode
+     * sequences. JLine's POSIX {@code trackMouse} writes {@code ?1005h} and {@code ?1000h}, which
+     * would replace the SGR encoding and downgrade cell motion to click-only tracking.
+     */
+    @Test
+    @DisplayName("cell motion on a POSIX terminal keeps the SGR cell-motion sequences only")
+    void test_CellMotionOnPosixTerminalKeepsSgrCellMotionOnly() throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (Terminal terminal = new DumbTerminal(
+                "posix", "xterm-256color", new ByteArrayInputStream(new byte[0]), out, StandardCharsets.UTF_8)) {
+            StandardRenderer renderer = new StandardRenderer(terminal);
+
+            renderer.handleMessage(new EnableMouseCellMotionMessage());
+
+            assertThat(out.toString(StandardCharsets.UTF_8))
+                    .isEqualTo(Code.EnableMouseCellMotion.value() + Code.EnableMouseSgrExt.value());
+        }
     }
 }

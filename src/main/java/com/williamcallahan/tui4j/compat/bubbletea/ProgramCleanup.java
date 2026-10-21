@@ -8,12 +8,9 @@ import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.jline.terminal.Terminal;
-import org.jline.utils.InfoCmp;
 
 /**
  * Cleanup and terminal restoration logic for {@link Program}.
- * <p>
- * Extracted to keep {@link ProgramCore} under the repository 350 line limit.
  * <p>
  * Upstream: bubbletea/tea.go
  *
@@ -91,10 +88,6 @@ final class ProgramCleanup {
         if (renderer.altScreen()) {
             renderer.exitAltScreen();
         }
-
-        terminal.puts(InfoCmp.Capability.carriage_return);
-        terminal.puts(InfoCmp.Capability.cursor_down);
-        terminal.flush();
 
         isRunning.set(false);
         commandExecutor.shutdown();

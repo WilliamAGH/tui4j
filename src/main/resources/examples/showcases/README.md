@@ -31,5 +31,5 @@ To run this example, you need to compile it with the project dependencies (packa
    javac -cp build/libs/tui4j-examples.jar -d build/tmp_classes src/main/resources/examples/showcases/PulseExample.java
 
    # Run it
-   java -cp "build/libs/tui4j-examples.jar:build/tmp_classes" com.williamcallahan.tui4j.examples.showcases.PulseExample
+   java -cp "build/libs/tui4j-examples.jar:build/tmp_classes" examples.showcases.PulseExample
    ```
