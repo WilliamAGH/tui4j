@@ -88,6 +88,9 @@ final class ViewportContent {
 
     /**
      * Pads the visible content before applying the viewport's existing style.
+     * <p>
+     * Rows are joined, not terminated, by newlines, as upstream {@code View} joins
+     * {@code visibleLines()}: a trailing newline would render one row past the height.
      *
      * @param width the viewport width including the style's horizontal frame
      * @param height the viewport height including the style's vertical frame
@@ -100,21 +103,18 @@ final class ViewportContent {
         int effectiveWidth = max(1, width - style.getHorizontalFrameSize());
         int effectiveHeight = max(1, height - style.getVerticalFrameSize());
 
-        StringBuilder content = new StringBuilder();
-        List<String> visible = visibleLines(width, height, style, xOffset, yOffset);
-        for (String line : visible) {
-            content.append(line != null ? line : "").append("\n");
+        List<String> rows = new ArrayList<>();
+        for (String line : visibleLines(width, height, style, xOffset, yOffset)) {
+            rows.add(line != null ? line : "");
         }
-
-        int linesNeeded = effectiveHeight - visible.size();
-        for (int i = 0; i < linesNeeded; i++) {
-            content.append("\n");
+        while (rows.size() < effectiveHeight) {
+            rows.add("");
         }
 
         return style
             .width(effectiveWidth)
             .height(effectiveHeight)
-            .render(content.toString());
+            .render(String.join("\n", rows));
     }
 
     /**
