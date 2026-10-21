@@ -67,6 +67,14 @@ class TextareaViewportKeysTest {
         assertThat(rows).hasSize(2);
         assertThat(rows[0]).contains("line four");
         assertThat(rows[1]).contains("line five");
+
+        textarea.setEndOfBufferCharacter('~');
+        textarea.update(MouseMessage.parseSGRMouseEvent(65, 1, 1, false));
+
+        String[] scrolledRows = textarea.view().split("\n");
+        assertThat(scrolledRows).hasSize(2);
+        assertThat(scrolledRows[0]).contains("line five");
+        assertThat(scrolledRows[1]).contains("~");
     }
 
     private static void type(Textarea textarea, String text) {

@@ -93,7 +93,9 @@ final class ViewportContent {
      * {@code visibleLines()}: a trailing newline would render one row past the height.
      * As upstream, an inner style pads and caps the content to the area inside the
      * frame, so long lines never wrap into extra rows, and the caller's style is
-     * applied to a copy with its size unset rather than mutated.
+     * applied to a copy with its size unset rather than mutated. Unlike upstream's
+     * final style application, positive viewport bounds also cap an oversized frame,
+     * retaining any stricter caller maximums.
      *
      * @param width the viewport width including the style's horizontal frame
      * @param height the viewport height including the style's vertical frame
@@ -117,7 +119,14 @@ final class ViewportContent {
             .maxWidth(effectiveWidth)
             .maxHeight(effectiveHeight)
             .render(String.join("\n", rows));
-        return style.copy().width(0).height(0).render(contents);
+        Style frame = style.copy().width(0).height(0);
+        if (width > 0 && (frame.getMaxWidth() <= 0 || frame.getMaxWidth() > width)) {
+            frame.maxWidth(width);
+        }
+        if (height > 0 && (frame.getMaxHeight() <= 0 || frame.getMaxHeight() > height)) {
+            frame.maxHeight(height);
+        }
+        return frame.render(contents);
     }
 
     /**

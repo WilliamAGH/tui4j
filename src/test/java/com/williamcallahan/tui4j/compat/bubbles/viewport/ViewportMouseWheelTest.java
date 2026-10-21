@@ -14,6 +14,7 @@ class ViewportMouseWheelTest {
     private static final String TALL_CONTENT = "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight";
     private static final String WIDE_CONTENT = "abcdefghijklmnopqrstuvwxyz\nsecond";
 
+    /** Verifies vertical wheel scrolling and its bounds. */
     @Test
     void wheelScrollsVerticallyByTheWheelDeltaWithinBounds() {
         Viewport viewport = new Viewport(TALL_CONTENT, 20, 3);
@@ -29,6 +30,7 @@ class ViewportMouseWheelTest {
         assertThat(viewport.getYOffset()).isEqualTo(2);
     }
 
+    /** Verifies the configured number of rows per wheel step. */
     @Test
     void customWheelDeltaSetsTheRowsPerStep() {
         Viewport viewport = new Viewport(TALL_CONTENT, 20, 3);
@@ -39,6 +41,7 @@ class ViewportMouseWheelTest {
         assertThat(viewport.getYOffset()).isEqualTo(1);
     }
 
+    /** Verifies that disabling the wheel preserves the visible content. */
     @Test
     void disabledWheelLeavesTheViewInPlace() {
         Viewport viewport = new Viewport(TALL_CONTENT, 20, 3);
@@ -49,6 +52,7 @@ class ViewportMouseWheelTest {
         assertThat(viewport.getYOffset()).isZero();
     }
 
+    /** Verifies horizontal and shifted wheel panning. */
     @Test
     void horizontalAndShiftedWheelPanByTheHorizontalStep() {
         Viewport viewport = new Viewport(WIDE_CONTENT, 10, 2);
@@ -66,6 +70,7 @@ class ViewportMouseWheelTest {
         assertThat(viewport.getXOffset()).isZero();
     }
 
+    /** Verifies that non-wheel presses leave the viewport in place. */
     @Test
     void nonWheelButtonsDoNotScroll() {
         Viewport viewport = new Viewport(TALL_CONTENT, 20, 3);
@@ -75,6 +80,7 @@ class ViewportMouseWheelTest {
         assertThat(viewport.getYOffset()).isZero();
     }
 
+    /** Creates a wheel press from its SGR button code. */
     private static MouseMessage wheel(int sgrButton) {
         return MouseMessage.parseSGRMouseEvent(sgrButton, 1, 1, false);
     }

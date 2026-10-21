@@ -32,6 +32,29 @@ class ViewportViewHeightTest {
         assertThat(rows).containsExactly("abcdefghij", "second    ");
     }
 
+    /** Keeps padding within positive bounds even when no content area remains. */
+    @Test
+    void frameConsumingTheAreaDoesNotOverflowTheViewport() {
+        Viewport viewport = new Viewport("x", 1, 1);
+
+        for (int padding : new int[] {1, 2}) {
+            viewport.setStyle(Style.newStyle().paddingLeft(padding));
+            assertThat(viewport.view()).isEqualTo(" ");
+
+            viewport.setStyle(Style.newStyle().paddingTop(padding));
+            assertThat(viewport.view()).isEqualTo(" ");
+        }
+    }
+
+    /** Retains caller maximums that are smaller than the viewport dimensions. */
+    @Test
+    void renderingPreservesStricterCallerMaximums() {
+        Viewport viewport = new Viewport("one\ntwo", 10, 2);
+        viewport.setStyle(Style.newStyle().maxWidth(1).maxHeight(1));
+
+        assertThat(viewport.view()).isEqualTo("o");
+    }
+
     @Test
     void renderingLeavesTheCallersStyleUnsized() {
         Style style = Style.newStyle().paddingLeft(1);
