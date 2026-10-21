@@ -178,10 +178,15 @@ class RendererFlush {
      * Alternate-screen rows use absolute positions rather than line feeds. A
      * terminal may assign a different width to a joined Unicode sequence than
      * the grapheme contract used to build the view. Absolute positioning plus
-     * disabled autowrap keeps that disagreement inside its owning row; clearing
-     * first also removes a stale suffix when the terminal renders it narrower.
+     * disabled autowrap keeps that disagreement inside its owning row.
      * Current upstream uses absolute coordinates for fullscreen rendering in
      * {@code bubbletea/cursed_renderer.go}.
+     * <p>
+     * Every row is written before its remainder is erased, as upstream
+     * {@code bubbletea/standard_renderer.go} does: terminals read output in chunks and may
+     * paint between reads, so clearing a row first blanks it whenever a read ends inside
+     * the frame. Only a row narrower than the terminal gets the erase, because erasing
+     * from the last column would wipe a full-width row's final cell.
      */
     private void renderDiffLines(StringBuilder out, String[] newLines, boolean forceRender, int width) {
         for (int i = 0; i < newLines.length; i++) {
@@ -205,11 +210,12 @@ class RendererFlush {
 
             if (isInAltScreen) {
                 appendCursorPosition(out, i + 1);
-                out.append("\033[K").append(line);
-            } else if (width > 0 && StringWidth.stringWidth(line) < width) {
-                out.append("\r").append(line).append("\033[K");
             } else {
-                out.append("\r").append(line);
+                out.append("\r");
+            }
+            out.append(line);
+            if (width > 0 && StringWidth.stringWidth(line) < width) {
+                out.append("\033[K");
             }
 
             if (!isInAltScreen && i < newLines.length - 1) {
