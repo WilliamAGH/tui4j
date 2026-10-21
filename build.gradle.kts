@@ -2,6 +2,7 @@
  * TUI4J Root Build
  */
 
+import java.time.Duration
 import org.gradle.api.attributes.java.TargetJvmEnvironment
 
 plugins {
@@ -137,7 +138,8 @@ configurations["examplesGenericRuntimeClasspath"].extendsFrom(
     configurations.runtimeClasspath.get()
 )
 
-    "examplesSpringImplementation"(platform("org.springframework.boot:spring-boot-dependencies:3.5.10"))
+    "examplesSpringImplementation"(platform("org.springframework.boot:spring-boot-dependencies:3.5.16"))
+    "examplesSpringImplementation"(platform("org.apache.logging.log4j:log4j-bom:2.25.5"))
     "examplesSpringImplementation"(sourceSets.main.get().output)
     "examplesSpringImplementation"(libs.org.springframework.boot.spring.boot.starter.data.jpa) {
         exclude(group = "org.yaml", module = "snakeyaml")
@@ -367,5 +369,6 @@ nmcp {
         username.set(providers.environmentVariable("SONATYPE_USERNAME").orNull)
         password.set(providers.environmentVariable("SONATYPE_PASSWORD").orNull)
         publishingType.set("AUTOMATIC")
+        publishingTimeout.set(Duration.ofMinutes(30))
     }
 }
