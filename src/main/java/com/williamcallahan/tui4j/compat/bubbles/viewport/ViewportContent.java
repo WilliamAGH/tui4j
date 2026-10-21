@@ -72,7 +72,7 @@ final class ViewportContent {
             int high = max(top, lines.size());
             int bottom = max(low, min(high, yOffset + h));
             List<String> result = lines.subList(top, bottom);
-            if (xOffset == 0 || w <= 0) {
+            if ((xOffset == 0 && longestLineWidth <= w) || w <= 0) {
                 return new ArrayList<>(result);
             }
 

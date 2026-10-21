@@ -25,11 +25,11 @@ class ViewportViewHeightTest {
     }
 
     @Test
-    void lineWiderThanTheViewportIsCutInsteadOfWrapped() {
-        Viewport viewport = new Viewport("abcdefghijklmnopqrstuvwxyz", 10, 1);
+    void lineWiderThanTheViewportDoesNotDisplaceTheFollowingRow() {
+        Viewport viewport = new Viewport("abcdefghijklmnopqrstuvwxyz\nsecond", 10, 2);
 
         String[] rows = viewport.view().split("\n", -1);
-        assertThat(rows).containsExactly("abcdefghij");
+        assertThat(rows).containsExactly("abcdefghij", "second    ");
     }
 
     @Test
