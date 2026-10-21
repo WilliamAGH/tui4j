@@ -1,6 +1,7 @@
 package com.williamcallahan.tui4j.compat.bubbles.textarea;
 
 import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
+import com.williamcallahan.tui4j.compat.bubbletea.input.MouseMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.input.key.Key;
 import com.williamcallahan.tui4j.compat.bubbletea.input.key.KeyType;
 import com.williamcallahan.tui4j.compat.lipgloss.Renderer;
@@ -13,11 +14,12 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Verifies that typed characters never drive the textarea's internal viewport.
+ * Verifies how the textarea's internal viewport reacts to keys and the mouse wheel.
  * <p>
  * Upstream bubbles/textarea/textarea.go {@code New} clears the viewport key map
  * ({@code vp.KeyMap = viewport.KeyMap{}}), so pager keys such as {@code d},
- * {@code f}, {@code j} and space only insert text.
+ * {@code f}, {@code j} and space only insert text. Wheel messages do reach the
+ * viewport, and {@code repositionView} then brings the cursor row back into view.
  */
 class TextareaViewportKeysTest {
 
@@ -46,6 +48,33 @@ class TextareaViewportKeysTest {
         String[] rows = textarea.view().split("\n");
         assertThat(rows[0]).contains("first");
         assertThat(rows[1]).contains("second dfj");
+    }
+
+    @Test
+    void wheelScrollingAwayFromTheCursorSnapsBackToTheCursorRow() {
+        Textarea textarea = new Textarea();
+        textarea.setPrompt("> ");
+        textarea.setShowLineNumbers(false);
+        textarea.setWidth(40);
+        textarea.setHeight(2);
+        textarea.focus();
+        textarea.setValue("line one\nline two\nline three\nline four\nline five");
+        textarea.view();
+
+        textarea.update(MouseMessage.parseSGRMouseEvent(64, 1, 1, false));
+
+        String[] rows = textarea.view().split("\n");
+        assertThat(rows).hasSize(2);
+        assertThat(rows[0]).contains("line four");
+        assertThat(rows[1]).contains("line five");
+
+        textarea.setEndOfBufferCharacter('~');
+        textarea.update(MouseMessage.parseSGRMouseEvent(65, 1, 1, false));
+
+        String[] scrolledRows = textarea.view().split("\n");
+        assertThat(scrolledRows).hasSize(2);
+        assertThat(scrolledRows[0]).contains("line five");
+        assertThat(scrolledRows[1]).contains("~");
     }
 
     private static void type(Textarea textarea, String text) {

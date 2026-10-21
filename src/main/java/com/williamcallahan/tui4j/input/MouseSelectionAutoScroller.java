@@ -31,7 +31,6 @@ public final class MouseSelectionAutoScroller {
     private volatile int edgeRows = 1;
     private volatile int intervalMs = 50;
 
-    private volatile boolean shift;
     private volatile boolean alt;
     private volatile boolean ctrl;
 
@@ -171,7 +170,8 @@ public final class MouseSelectionAutoScroller {
             new MouseMessage(
                 selectionTracker.lastColumn(),
                 row,
-                shift,
+                // Never shifted: Viewport, like upstream, pans sideways on a shifted wheel.
+                false,
                 alt,
                 ctrl,
                 MouseAction.MouseActionPress,
@@ -187,7 +187,6 @@ public final class MouseSelectionAutoScroller {
             return;
         }
         // Keep modifier state consistent with the latest user interaction.
-        shift = message.isShift();
         alt = message.isAlt();
         ctrl = message.isCtrl();
     }

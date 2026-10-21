@@ -72,7 +72,7 @@ final class ViewportContent {
             int high = max(top, lines.size());
             int bottom = max(low, min(high, yOffset + h));
             List<String> result = lines.subList(top, bottom);
-            if (xOffset == 0 || w <= 0) {
+            if ((xOffset == 0 && longestLineWidth <= w) || w <= 0) {
                 return new ArrayList<>(result);
             }
 
@@ -88,6 +88,14 @@ final class ViewportContent {
 
     /**
      * Pads the visible content before applying the viewport's existing style.
+     * <p>
+     * Rows are joined, not terminated, by newlines, as upstream {@code View} joins
+     * {@code visibleLines()}: a trailing newline would render one row past the height.
+     * As upstream, an inner style pads and caps the content to the area inside the
+     * frame, so long lines never wrap into extra rows, and the caller's style is
+     * applied to a copy with its size unset rather than mutated. Unlike upstream's
+     * final style application, positive viewport bounds also cap an oversized frame,
+     * retaining any stricter caller maximums.
      *
      * @param width the viewport width including the style's horizontal frame
      * @param height the viewport height including the style's vertical frame
@@ -100,21 +108,25 @@ final class ViewportContent {
         int effectiveWidth = max(1, width - style.getHorizontalFrameSize());
         int effectiveHeight = max(1, height - style.getVerticalFrameSize());
 
-        StringBuilder content = new StringBuilder();
-        List<String> visible = visibleLines(width, height, style, xOffset, yOffset);
-        for (String line : visible) {
-            content.append(line != null ? line : "").append("\n");
+        List<String> rows = new ArrayList<>();
+        for (String line : visibleLines(width, height, style, xOffset, yOffset)) {
+            rows.add(line != null ? line : "");
         }
 
-        int linesNeeded = effectiveHeight - visible.size();
-        for (int i = 0; i < linesNeeded; i++) {
-            content.append("\n");
-        }
-
-        return style
+        String contents = Style.newStyle()
             .width(effectiveWidth)
             .height(effectiveHeight)
-            .render(content.toString());
+            .maxWidth(effectiveWidth)
+            .maxHeight(effectiveHeight)
+            .render(String.join("\n", rows));
+        Style frame = style.copy().width(0).height(0);
+        if (width > 0 && (frame.getMaxWidth() <= 0 || frame.getMaxWidth() > width)) {
+            frame.maxWidth(width);
+        }
+        if (height > 0 && (frame.getMaxHeight() <= 0 || frame.getMaxHeight() > height)) {
+            frame.maxHeight(height);
+        }
+        return frame.render(contents);
     }
 
     /**

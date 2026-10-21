@@ -95,8 +95,8 @@ public class PagerExample implements Model {
             }
         }
 
-        UpdateResult<? extends Model> result = viewport.update(msg);
-        return result;
+        UpdateResult<Viewport> result = viewport.update(msg);
+        return UpdateResult.from(this, result.command());
     }
 
     /**
