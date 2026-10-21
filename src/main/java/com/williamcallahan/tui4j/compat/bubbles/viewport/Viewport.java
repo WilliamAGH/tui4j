@@ -3,9 +3,7 @@ package com.williamcallahan.tui4j.compat.bubbles.viewport;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-import com.williamcallahan.tui4j.compat.bubbles.key.Binding;
 import com.williamcallahan.tui4j.compat.bubbletea.Command;
-import com.williamcallahan.tui4j.compat.bubbletea.KeyPressMessage;
 import com.williamcallahan.tui4j.compat.bubbletea.Message;
 import com.williamcallahan.tui4j.compat.bubbletea.Model;
 import com.williamcallahan.tui4j.compat.bubbletea.UpdateResult;
@@ -248,6 +246,13 @@ public class Viewport implements Model {
         this.horizontalStep = max(n, 0);
     }
 
+    /** Returns the horizontal step that key and wheel panning use.
+     * @return horizontal navigation step in terminal cells
+     */
+    int horizontalStep() {
+        return horizontalStep;
+    }
+
     /** Constrains the horizontal offset to the measured content width.
      * @param n requested horizontal offset in terminal cells
      */
@@ -308,28 +313,7 @@ public class Viewport implements Model {
      */
     @Override
     public UpdateResult<Viewport> update(Message msg) {
-        if (msg instanceof KeyPressMessage keyPressMessage) {
-            if (Binding.matches(keyPressMessage, keyMap.pageDown())) {
-                pageDown();
-            } else if (Binding.matches(keyPressMessage, keyMap.pageUp())) {
-                pageUp();
-            } else if (
-                Binding.matches(keyPressMessage, keyMap.halfPageDown())
-            ) {
-                halfPageDown();
-            } else if (Binding.matches(keyPressMessage, keyMap.halfPageUp())) {
-                halfPageUp();
-            } else if (Binding.matches(keyPressMessage, keyMap.down())) {
-                scrollDown(1);
-            } else if (Binding.matches(keyPressMessage, keyMap.up())) {
-                scrollUp(1);
-            } else if (Binding.matches(keyPressMessage, keyMap.left())) {
-                scrollLeft(horizontalStep);
-            } else if (Binding.matches(keyPressMessage, keyMap.right())) {
-                scrollRight(horizontalStep);
-            }
-        }
-
+        ViewportInputHandler.apply(this, msg);
         return UpdateResult.from(this);
     }
 
