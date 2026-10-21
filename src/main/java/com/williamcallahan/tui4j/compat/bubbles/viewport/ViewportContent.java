@@ -91,6 +91,9 @@ final class ViewportContent {
      * <p>
      * Rows are joined, not terminated, by newlines, as upstream {@code View} joins
      * {@code visibleLines()}: a trailing newline would render one row past the height.
+     * As upstream, an inner style pads and caps the content to the area inside the
+     * frame, so long lines never wrap into extra rows, and the caller's style is
+     * applied to a copy with its size unset rather than mutated.
      *
      * @param width the viewport width including the style's horizontal frame
      * @param height the viewport height including the style's vertical frame
@@ -107,14 +110,14 @@ final class ViewportContent {
         for (String line : visibleLines(width, height, style, xOffset, yOffset)) {
             rows.add(line != null ? line : "");
         }
-        while (rows.size() < effectiveHeight) {
-            rows.add("");
-        }
 
-        return style
+        String contents = Style.newStyle()
             .width(effectiveWidth)
             .height(effectiveHeight)
+            .maxWidth(effectiveWidth)
+            .maxHeight(effectiveHeight)
             .render(String.join("\n", rows));
+        return style.copy().width(0).height(0).render(contents);
     }
 
     /**
