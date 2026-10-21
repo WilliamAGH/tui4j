@@ -94,12 +94,13 @@ public class Spring {
      * @param frequency spring frequency
      * @param damping spring damping
      * @return spring instance
-     * @throws IllegalArgumentException when fps is not a positive finite number
+     * @throws IllegalArgumentException when {@code 1 / fps} is not a positive finite frame time
      */
     public static Spring withFPS(double fps, double frequency, double damping) {
-        if (!Double.isFinite(fps) || fps <= 0.0) {
-            throw new IllegalArgumentException("fps must be positive and finite");
+        double frameTime = 1.0 / fps;
+        if (!(frameTime > 0.0 && Double.isFinite(frameTime))) {
+            throw new IllegalArgumentException("fps must yield a positive finite frame time");
         }
-        return new Spring(frequency, damping, 1.0 / fps);
+        return new Spring(frequency, damping, frameTime);
     }
 }
