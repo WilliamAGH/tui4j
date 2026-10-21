@@ -142,7 +142,7 @@ final class TextAreaInputHandler {
 
         // Upstream textarea.New clears the viewport key map (vp.KeyMap = viewport.KeyMap{}),
         // so typed pager keys such as d, f, j and space never scroll the input; only
-        // non-key messages such as the mouse wheel reach the viewport.
+        // non-key messages reach the viewport, as upstream forwards them.
         if (!(msg instanceof KeyPressMessage)) {
             UpdateResult<Viewport> viewportUpdate = state.viewport.update(msg);
             state.viewport = viewportUpdate.model();

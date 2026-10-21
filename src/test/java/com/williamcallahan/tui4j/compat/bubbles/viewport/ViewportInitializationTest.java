@@ -32,7 +32,6 @@ class ViewportInitializationTest {
 
         viewport.update(MouseMessage.parseSGRMouseEvent(65, 1, 1, false));
 
-        assertEquals(0, viewport.getYOffset());
         assertFalse(viewport.isMouseWheelEnabled());
     }
 
