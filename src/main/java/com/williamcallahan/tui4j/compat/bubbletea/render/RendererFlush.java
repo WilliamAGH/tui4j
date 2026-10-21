@@ -185,8 +185,10 @@ class RendererFlush {
      * Every row is written before its remainder is erased, as upstream
      * {@code bubbletea/standard_renderer.go} does: terminals read output in chunks and may
      * paint between reads, so clearing a row first blanks it whenever a read ends inside
-     * the frame. Only a row narrower than the terminal gets the erase, because erasing
-     * from the last column would wipe a full-width row's final cell.
+     * the frame. A row measured to fill the terminal gets no erase, because erasing from
+     * the last column would wipe its final cell; as upstream, a terminal that renders such a
+     * row narrower keeps the previous frame's final cell. An unknown width (zero) always
+     * erases, since no row is known to fill it.
      */
     private void renderDiffLines(StringBuilder out, String[] newLines, boolean forceRender, int width) {
         for (int i = 0; i < newLines.length; i++) {
@@ -214,7 +216,7 @@ class RendererFlush {
                 out.append("\r");
             }
             out.append(line);
-            if (width > 0 && StringWidth.stringWidth(line) < width) {
+            if (width <= 0 || StringWidth.stringWidth(line) < width) {
                 out.append("\033[K");
             }
 

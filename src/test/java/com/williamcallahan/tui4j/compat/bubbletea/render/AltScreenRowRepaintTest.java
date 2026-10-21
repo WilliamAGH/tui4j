@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Verifies an alternate-screen repaint never shows a row erased ahead of its redraw.
+ * Verifies alternate-screen repaints leave each row showing only current or previous cells.
  * <p>
  * Terminals read output in chunks and may paint between reads, so every prefix of a
  * frame is a state the user can see.
  */
-class AltScreenPartialFrameTest {
+class AltScreenRowRepaintTest {
 
     private static final int WIDTH = 20;
     private static final int HEIGHT = 4;
@@ -40,6 +40,23 @@ class AltScreenPartialFrameTest {
         }
 
         assertThat(screen.line(HEIGHT - 1)).startsWith("│ two");
+    }
+
+    /** An unknown terminal width must not leave a longer row's suffix behind a shorter one. */
+    @Test
+    void unknownWidthRepaintErasesTheReplacedRowsSuffix() {
+        RendererTestTerminal terminal = new RendererTestTerminal(WIDTH, HEIGHT);
+        RendererFlush flush = new RendererFlush(terminal.terminal());
+        TerminalCellModel screen = new TerminalCellModel(WIDTH, HEIGHT);
+        flush.enterAltScreen();
+        flush.write("123456789\nfooter", true);
+        flush.flush(0, HEIGHT);
+        flush.write("X\nfooter", true);
+        flush.flush(0, HEIGHT);
+        screen.apply(terminal.drain());
+
+        assertThat(screen.line(0)).isEqualTo("X" + " ".repeat(WIDTH - 1));
+        assertThat(screen.line(1)).startsWith("footer");
     }
 
     /**
