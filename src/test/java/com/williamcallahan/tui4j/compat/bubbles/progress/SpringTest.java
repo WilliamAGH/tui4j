@@ -27,10 +27,10 @@ class SpringTest {
     private static final double FREQUENCY = 18.0;
     private static final double DAMPING = 1.0;
 
-    /** A frame rate must advance the spring by a positive timestep. */
+    /** A frame rate must advance the spring by a positive, finite timestep. */
     @ParameterizedTest
-    @ValueSource(doubles = {0.0, -60.0})
-    void testWithFpsRejectsNonPositiveFrameRates(double fps) {
+    @ValueSource(doubles = {0.0, -60.0, Double.NaN, Double.POSITIVE_INFINITY})
+    void testWithFpsRejectsNonPositiveOrNonFiniteFrameRates(double fps) {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> Spring.withFPS(fps, FREQUENCY, DAMPING));
     }
