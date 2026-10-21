@@ -7,6 +7,7 @@ import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -114,11 +115,14 @@ public final class Clipboard {
             return readProcess(new ProcessBuilder("pbpaste"));
         }
         if (os.contains("win")) {
-            // Preserve clipboard line endings and match readProcess's UTF-8 decoder.
-            return readProcess(new ProcessBuilder(
+            // Base64 keeps the raw clipboard text (line endings, non-ASCII) independent of the
+            // console code page PowerShell uses for redirected output.
+            String encoded = readProcess(new ProcessBuilder(
                 "powershell", "-NoProfile", "-Command",
-                "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); "
-                    + "[Console]::Out.Write([string](Get-Clipboard -Raw))"));
+                "[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string](Get-Clipboard -Raw)))"));
+            return encoded == null
+                ? null
+                : new String(Base64.getDecoder().decode(encoded.strip()), StandardCharsets.UTF_8);
         }
 
         // Linux/Unix: try xclip first
@@ -143,6 +147,8 @@ public final class Clipboard {
     private static String readProcess(ProcessBuilder pb) {
         try {
             Process p = pb.redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            // PowerShell can wait for its open stdin pipe to close before exiting.
+            p.getOutputStream().close();
             // A helper waiting on an unresponsive selection owner never closes stdout;
             // killing it ends the read with a nonzero exit instead of pinning the thread.
             p.onExit()
