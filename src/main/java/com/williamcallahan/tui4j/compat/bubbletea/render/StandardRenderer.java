@@ -85,6 +85,7 @@ public class StandardRenderer implements Renderer {
     // Bubble Tea: seeks to replicate bubbletea/standard_renderer.go stop behavior.
     public void stop() {
         flush();
+        rendererFlush.moveBelowFrame();
         isRunning = false;
         try {
             ticker.shutdownNow();

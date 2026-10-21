@@ -8,7 +8,6 @@ import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.jline.terminal.Terminal;
-import org.jline.utils.InfoCmp;
 
 /**
  * Cleanup and terminal restoration logic for {@link Program}.
@@ -89,13 +88,6 @@ final class ProgramCleanup {
         if (renderer.altScreen()) {
             renderer.exitAltScreen();
         }
-
-        // Upstream standard_renderer.go stop erases the final row (EraseEntireLine + CR) so
-        // the shell prompt replaces it. tui4j keeps that row and moves below it instead:
-        // full-frame views such as Brief's bordered layout otherwise lose their bottom edge.
-        terminal.puts(InfoCmp.Capability.carriage_return);
-        terminal.puts(InfoCmp.Capability.cursor_down);
-        terminal.flush();
 
         isRunning.set(false);
         commandExecutor.shutdown();

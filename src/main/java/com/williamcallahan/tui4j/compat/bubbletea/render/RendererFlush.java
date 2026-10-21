@@ -151,22 +151,25 @@ class RendererFlush {
         return newLines;
     }
 
-    /** Appends queued print-line messages and returns their row count; skips alt-screen mode. */
+    /** Appends queued print-line messages and returns the physical rows they occupy; skips alt-screen mode. */
     private int flushQueuedMessages(StringBuilder out, int width) {
         if (queuedMessageLines.isEmpty() || isInAltScreen) {
             return 0;
         }
+        int queuedRows = 0;
         for (String line : queuedMessageLines) {
-            if (width > 0 && StringWidth.stringWidth(line) < width) {
+            int lineWidth = StringWidth.stringWidth(line);
+            if (width > 0 && lineWidth < width) {
                 out.append(line).append("\033[K");
             } else {
                 out.append(line);
             }
             out.append("\r\n");
+            // A line wider than the terminal wraps natively onto extra physical rows.
+            queuedRows += width > 0 ? Math.max(1, (lineWidth + width - 1) / width) : 1;
         }
-        int queuedLines = queuedMessageLines.size();
         queuedMessageLines.clear();
-        return queuedLines;
+        return queuedRows;
     }
 
     /**
@@ -395,6 +398,27 @@ class RendererFlush {
     /** Returns whether the terminal is currently in alternate-screen mode. */
     boolean altScreen() {
         return isInAltScreen;
+    }
+
+    /**
+     * Moves the cursor below the last normal-screen frame so the shell prompt starts under it.
+     * <p>
+     * Upstream standard_renderer.go stop erases the final row instead; tui4j keeps it because
+     * full-frame views such as Brief's bordered layout otherwise lose their bottom edge. CRLF
+     * scrolls at the bottom margin, where a cursor-down capability may not. The alternate
+     * screen restores the launch cursor on exit, so it needs no advance.
+     */
+    void moveBelowFrame() {
+        renderLock.lock();
+        try {
+            if (isInAltScreen || linesRendered == 0) {
+                return;
+            }
+            terminal.writer().print("\r\n");
+            terminal.writer().flush();
+        } finally {
+            renderLock.unlock();
+        }
     }
 
     /**

@@ -22,8 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>
  * Upstream: github.com/charmbracelet/bubbletea/tea.go {@code shutdown} runs
  * {@code renderer.stop()}, which erases the final row, then {@code restoreTerminalState}.
- * tui4j keeps the final row, so cleanup moves the cursor to the start of the next line
- * where the shell prompt appears.
+ * tui4j keeps the final row; the renderer's stop moves below it, so cleanup itself only
+ * restores modes and writes no cursor motion.
  */
 class ProgramCleanupTest {
 
@@ -65,8 +65,8 @@ class ProgramCleanupTest {
     }
 
     @Test
-    @DisplayName("cleanup moves below the kept final row")
-    void test_CleanupMovesBelowTheFinalRow() {
+    @DisplayName("cleanup restores modes without moving the cursor")
+    void test_CleanupDoesNotMoveTheCursor() {
         Terminal terminal = newRecordingTerminal();
         StandardRenderer renderer = new StandardRenderer(terminal);
         InputHandler inputHandler = new InputHandler() {
@@ -95,8 +95,9 @@ class ProgramCleanupTest {
 
         // Control: the cursor-visibility restore proves puts() calls are recorded.
         assertThat(puts).contains(InfoCmp.Capability.cursor_visible);
-        assertThat(puts).containsSubsequence(
-            InfoCmp.Capability.carriage_return, InfoCmp.Capability.cursor_down);
+        assertThat(puts).doesNotContain(InfoCmp.Capability.carriage_return);
+        assertThat(puts).doesNotContain(InfoCmp.Capability.cursor_down);
+        assertThat(out.toString()).doesNotContain("\r\n");
         assertThat(running).isFalse();
     }
 }

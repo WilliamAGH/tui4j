@@ -155,10 +155,10 @@ class StandardRendererTest {
     }
 
     /**
-     * Verifies {@code stop()} renders the final frame and leaves its last row on screen.
+     * Verifies {@code stop()} renders the final frame, keeps its last row, and moves below it.
      * <p>
      * Upstream standard_renderer.go stop erases that row; tui4j keeps it so full-frame
-     * views keep their bottom edge after exit, and ProgramCleanup moves below it.
+     * views keep their bottom edge after exit, then starts the shell prompt on the next line.
      */
     @Test
     @DisplayName("stop renders the final frame and keeps its last row")
@@ -172,8 +172,30 @@ class StandardRendererTest {
         renderer.stop();
 
         String output = out.toString();
-        assertThat(output).contains("line three");
-        assertThat(output.substring(output.indexOf("line three"))).doesNotContain("\u001b[2K");
+        String afterFrame = output.substring(output.indexOf("line three"));
+        assertThat(afterFrame).doesNotContain("\u001b[2K");
+        assertThat(afterFrame).endsWith("\r\n");
+    }
+
+    /**
+     * Verifies {@code stop()} adds no line advance for an alternate-screen frame or before any
+     * frame was painted: the alternate screen restores the launch cursor on exit, and a program
+     * that rendered nothing must not emit stray output.
+     */
+    @Test
+    @DisplayName("stop adds no line advance in the alternate screen or before any frame")
+    void test_StopAddsNoAdvanceWithoutNormalScreenFrame() {
+        StringWriter unpainted = new StringWriter();
+        new StandardRenderer(newFakeTerminal(unpainted)).stop();
+        assertThat(unpainted.toString()).isEmpty();
+
+        RendererTestTerminal alternate = new RendererTestTerminal(20, 5);
+        StandardRenderer renderer = new StandardRenderer(alternate.terminal());
+        renderer.start();
+        renderer.enterAltScreen();
+        renderer.write("alt frame");
+        renderer.stop();
+        assertThat(alternate.drain()).contains("alt frame").doesNotEndWith("\r\n");
     }
 
     /**
