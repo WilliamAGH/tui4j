@@ -14,7 +14,7 @@
 
 ## Installation
 
-> Latest stable release: **0.3.3** — [view on Maven Central](https://central.sonatype.com/artifact/com.williamcallahan/tui4j) | [view on mvnrepository](https://mvnrepository.com/artifact/com.williamcallahan/tui4j)
+> Latest stable release: **0.3.4** — [view on Maven Central](https://central.sonatype.com/artifact/com.williamcallahan/tui4j) | [view on mvnrepository](https://mvnrepository.com/artifact/com.williamcallahan/tui4j)
 
 ### Maven
 
@@ -22,14 +22,14 @@
 <dependency>
     <groupId>com.williamcallahan</groupId>
     <artifactId>tui4j</artifactId>
-    <version>0.3.3</version>
+    <version>0.3.4</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.williamcallahan:tui4j:0.3.3'
+implementation 'com.williamcallahan:tui4j:0.3.4'
 ```
 
 ### Snapshots
