@@ -56,7 +56,7 @@ Maven:
     <dependency>
         <groupId>com.williamcallahan</groupId>
         <artifactId>tui4j</artifactId>
-        <version>0.3.4-SNAPSHOT</version>
+        <version>0.3.5-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```
@@ -70,7 +70,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.williamcallahan:tui4j:0.3.4-SNAPSHOT")
+    implementation("com.williamcallahan:tui4j:0.3.5-SNAPSHOT")
 }
 ```
 
