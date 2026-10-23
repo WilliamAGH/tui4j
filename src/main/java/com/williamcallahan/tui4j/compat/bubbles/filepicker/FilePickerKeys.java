@@ -193,7 +193,7 @@ final class FilePickerKeys {
         }
 
         if (
-            (!isDir && picker.fileAllowed()) ||
+            (!isDir && picker.fileAllowed() && picker.canSelect(f.name())) ||
             (isDir && picker.dirAllowed())
         ) {
             if (Binding.matches(keyMsg, picker.keyMap().select())) {

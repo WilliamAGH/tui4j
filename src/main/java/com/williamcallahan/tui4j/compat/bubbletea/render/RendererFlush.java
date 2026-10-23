@@ -159,7 +159,9 @@ class RendererFlush {
         int queuedRows = 0;
         for (String line : queuedMessageLines) {
             int lineWidth = StringWidth.stringWidth(line);
-            if (width > 0 && lineWidth < width) {
+            if (width <= 0) {
+                out.append("\033[K").append(line);
+            } else if (lineWidth < width) {
                 out.append(line).append("\033[K");
             } else {
                 out.append(line);
@@ -182,13 +184,14 @@ class RendererFlush {
      * Current upstream uses absolute coordinates for fullscreen rendering in
      * {@code bubbletea/cursed_renderer.go}.
      * <p>
-     * Every row is written before its remainder is erased, as upstream
+     * With a known width, every row is written before its remainder is erased, as upstream
      * {@code bubbletea/standard_renderer.go} does: terminals read output in chunks and may
      * paint between reads, so clearing a row first blanks it whenever a read ends inside
      * the frame. A row measured to fill the terminal gets no erase, because erasing from
      * the last column would wipe its final cell; as upstream, a terminal that renders such a
-     * row narrower keeps the previous frame's final cell. An unknown width (zero) always
-     * erases, since no row is known to fill it.
+     * row narrower keeps the previous frame's final cell. With an unknown width, erase
+     * before writing: delayed autowrap may leave the cursor on an occupied final cell,
+     * so an erase after writing could delete the row's last character.
      */
     private void renderDiffLines(StringBuilder out, String[] newLines, boolean forceRender, int width) {
         for (int i = 0; i < newLines.length; i++) {
@@ -215,8 +218,11 @@ class RendererFlush {
             } else {
                 out.append("\r");
             }
+            if (width <= 0) {
+                out.append("\033[K");
+            }
             out.append(line);
-            if (width <= 0 || StringWidth.stringWidth(line) < width) {
+            if (width > 0 && StringWidth.stringWidth(line) < width) {
                 out.append("\033[K");
             }
 

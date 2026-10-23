@@ -208,10 +208,14 @@ class FilePickerTest {
         filePicker.update(filePicker.init().execute());
         KeyPressMessage enter = new KeyPressMessage(new Key(KeyType.keyCR));
 
+        filePicker.update(enter);
+        assertNull(filePicker.selectedPath());
         assertFalse(filePicker.didSelectFile(enter));
         assertNull(filePicker.selectedPath());
 
         filePicker.setAllowedTypes(".java");
+        filePicker.update(enter);
+        assertEquals(dir.resolve("source.java").toString(), filePicker.selectedPath());
         assertTrue(filePicker.didSelectFile(enter));
         assertEquals(dir.resolve("source.java").toString(), filePicker.selectedPath());
     }
