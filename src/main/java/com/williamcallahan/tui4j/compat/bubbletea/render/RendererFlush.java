@@ -159,7 +159,7 @@ class RendererFlush {
         int queuedRows = 0;
         for (String line : queuedMessageLines) {
             int lineWidth = StringWidth.stringWidth(line);
-            if (width > 0 && lineWidth < width) {
+            if (width <= 0 || lineWidth < width) {
                 out.append(line).append("\033[K");
             } else {
                 out.append(line);

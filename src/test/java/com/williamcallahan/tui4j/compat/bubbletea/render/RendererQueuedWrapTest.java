@@ -10,6 +10,26 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RendererQueuedWrapTest {
 
+    /** Printed lines must replace the old view even before terminal width is known. */
+    @Test
+    void shortPrintedLineErasesOldViewWhenWidthIsUnknown() {
+        RendererTestTerminal terminal = new RendererTestTerminal(14, 6);
+        RendererFlush flush = new RendererFlush(terminal.terminal());
+        TerminalCellModel screen = new TerminalCellModel(14, 6);
+        flush.write("123456789\nfooter", true);
+        flush.flush(0, 6);
+        screen.apply(terminal.drain());
+
+        flush.queuePrintLine("X");
+        flush.write("body\nfooter", true);
+        flush.flush(0, 6);
+        screen.apply(terminal.drain());
+
+        assertThat(screen.line(0)).isEqualTo("X             ");
+        assertThat(screen.line(1)).startsWith("body");
+        assertThat(screen.line(2)).startsWith("footer");
+    }
+
     @Test
     void widePrintedLineAboveShorterViewKeepsTheViewRow() {
         RendererTestTerminal terminal = new RendererTestTerminal(14, 6);
